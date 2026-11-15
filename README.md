@@ -119,7 +119,7 @@ healing-station/
 | v1.1.0 | 摸鱼补给站 + 今日生存小游戏 + `#tab=xxx` 深链 |
 | v1.2.0 | 疗愈周报、记住上次心情、疗愈指数直达周报、无障碍细节 |
 | v1.2.1 | 修掉摸鱼补给站按钮不响的根因（`new` 返回构造器导致 AudioContext 取到类），并把播放链路纳入自动化回归 |
-| v1.3.0 | GitHub Pages 自动发布工作流 + 页面上的 GitHub 标识与仓库地址 |
+| v1.3.0 | GitHub Pages 自动发布工作流 + 页面上的 GitHub 标识与仓库地址；并修掉 `hidden` 属性被 `display:flex` 覆盖导致的空白横条 |
 
 ## 隐私
 
