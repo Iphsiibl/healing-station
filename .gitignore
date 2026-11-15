@@ -14,3 +14,6 @@ desktop.ini
 # 临时截图 / 诊断文件
 *.tmp
 *.log
+.shot-*.png
+.diag.html
+.seed.html

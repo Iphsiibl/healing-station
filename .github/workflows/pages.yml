@@ -60,6 +60,10 @@ jobs:
         with:
           path: _site
 
+      # 制品上传后偶尔会有几秒的可见性延迟，等一下再发布，避免偶发失败
+      - name: 等待制品可见
+        run: sleep 10
+
       - name: 发布到 GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

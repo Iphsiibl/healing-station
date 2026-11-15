@@ -42,6 +42,9 @@ html[data-theme="night"] {
 
 * { box-sizing: border-box; }
 
+/* hidden 属性优先于任何 display 规则，避免空元素漏出灰条 */
+[hidden] { display: none !important; }
+
 html, body { margin: 0; padding: 0; }
 
 body {
