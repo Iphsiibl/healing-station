@@ -56,6 +56,8 @@ class Node {
     this.classList.set = new Set(String(v || '').split(/\s+/).filter(Boolean));
   }
   get children() { return this.childNodes.filter(n => n instanceof Node); }
+  get firstChild() { return this.childNodes[0] || null; }
+  get lastChild() { return this.childNodes[this.childNodes.length - 1] || null; }
   get offsetWidth() { return 100; }
   setAttribute(name, value) {
     if (name === 'class') { this.className = value; return; }
@@ -71,6 +73,13 @@ class Node {
   getAttribute(name) {
     if (name === 'class') return this._className;
     return this.attributes[name] !== undefined ? this.attributes[name] : null;
+  }
+  removeAttribute(name) {
+    delete this.attributes[name];
+    if (name === 'hidden') { this.hidden = false; return; }
+    if (name === 'class') { this.className = ''; return; }
+    if (name === 'id') { this.id = ''; this.attributes.id = ''; return; }
+    if (name === 'value') { this.value = ''; return; }
   }
   appendChild(child) { child.parentNode = this; this.childNodes.push(child); return child; }
   removeChild(child) {
@@ -154,6 +163,21 @@ function matchesComplex(node, parts) {
     cur = cur.parentNode;
   }
   return idx < 0;
+}
+
+/* --- 假的 canvas 2D 上下文：只记录调用，不真的画 --- */
+function makeFakeCtx() {
+  const noop = () => {};
+  return {
+    canvas: null,
+    fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, globalAlpha: 1,
+    imageSmoothingEnabled: false, font: '', textAlign: 'left', textBaseline: 'top',
+    fillRect: noop, strokeRect: noop, clearRect: noop, fillText: noop, strokeText: noop,
+    beginPath: noop, closePath: noop, moveTo: noop, lineTo: noop, arc: noop,
+    fill: noop, stroke: noop, save: noop, restore: noop, translate: noop, rotate: noop,
+    scale: noop, setTransform: noop, resetTransform: noop, drawImage: noop, createLinearGradient: () => ({ addColorStop: noop }),
+    measureText: () => ({ width: 10 })
+  };
 }
 
 /* --- 极简 HTML 解析：只支持本项目用到的标签与属性 --- */
@@ -257,7 +281,16 @@ function boot(hash, seed) {
     readyState: 'complete',
     documentElement: rootNode,
     body: bodyNode,
-    createElement(tag) { return new Node(tag); },
+    createElement(tag) {
+      const n = new Node(tag);
+      /* 画布：给游戏内核一个最小可用的 2D 上下文，测试里只关心"能建起来" */
+      if (String(tag).toLowerCase() === 'canvas') {
+        n.width = 0; n.height = 0;
+        n.getContext = () => makeFakeCtx();
+        n.getBoundingClientRect = () => ({ width: 480, height: 432, left: 0, top: 0, right: 480, bottom: 432 });
+      }
+      return n;
+    },
     // 从 rootNode 查询，这样运行时 appendChild 到 body 的节点（如 toast）也能查到
     querySelector(sel) { return rootNode.querySelector(sel); },
     querySelectorAll(sel) { return rootNode.querySelectorAll(sel); },
@@ -309,17 +342,32 @@ function runScript(file) {
   vm.runInContext(code, sandbox, { filename: file });
 }
 
-boot('');
+/* 游戏内核与四款小游戏（在 app.js 之前加载，跟 index.html 的顺序一致） */
+const GAME_FILES = ['pixel.js', 'sprites.js', 'game-mole.js', 'game-dodge.js', 'game-match3.js', 'game-fish.js', 'hall.js'];
+function runGames() {
+  GAME_FILES.forEach(f => {
+    const code = fs.readFileSync(path.join(ROOT, 'games', f), 'utf8');
+    vm.runInContext(code, sandbox, { filename: 'games/' + f });
+  });
+}
 
-console.log('\n== 无头 DOM 冒烟测试 ==');
-try {
+/* 一次性把整个应用加载起来 */
+function loadApp() {
   runScript('data-moods.js');
   runScript('data-scenes.js');
   runScript('data-story.js');
   runScript('engine.js');
   runScript('audio.js');
+  runGames();
   runScript('app.js');
-  ok(true, '六个脚本在无头环境中加载无异常');
+}
+
+boot('');
+
+console.log('\n== 无头 DOM 冒烟测试 ==');
+try {
+  loadApp();
+  ok(true, '应用脚本（含游戏）在无头环境中加载无异常');
 } catch (e) {
   ok(false, '脚本加载无异常', e && e.message);
 }
@@ -374,7 +422,7 @@ ok(true, '点击复制未抛异常');
 
 /* Tab 切换 */
 const tabs = $$('.tab');
-ok(tabs.length === 5, '功能标签 5 个', String(tabs.length));
+ok(tabs.length === 6, '功能标签 6 个', String(tabs.length));
 tabs[1].click();
 ok($('#panel-talk').hidden === false && $('#panel-clinic').hidden === true, '切换到话术机面板',
   'talk.hidden=' + $('#panel-talk').hidden + ' clinic.hidden=' + $('#panel-clinic').hidden);
@@ -385,6 +433,30 @@ ok($('#panel-fish').hidden === false && $('#panel-clinic').hidden === true, '切
 tabs[3].click();
 ok($('#panel-game').hidden === false, '切换到小游戏面板');
 tabs[4].click();
+ok($('#panel-games').hidden === false, '切换到摸鱼游戏厅面板');
+ok(!!sandbox.HS_GAMES && sandbox.HS_GAMES.list().length === 4, '游戏厅注册了 4 款小游戏',
+  sandbox.HS_GAMES ? String(sandbox.HS_GAMES.list().length) : 'no HS_GAMES');
+ok($$('#gameHall .game-card').length === 4, '游戏厅渲染 4 张游戏卡片',
+  String($$('#gameHall .game-card').length));
+
+/* 点开一款游戏：真的能进舞台 */
+const gameCard0 = $$('#gameHall .game-card')[0];
+if (gameCard0) {
+  gameCard0.click();
+  ok($('#gameHall .hall-play').hidden === false, '点开游戏卡片后进入舞台');
+  ok($('#gameHall .hall-name').textContent.length > 1, '舞台显示游戏名：' + $('#gameHall .hall-name').textContent);
+  ok($$('#gameHall .hall-canvas').length === 1, '舞台挂上了像素画布');
+  ok($('#gameHall .hall-howto').textContent.length > 4, '舞台有玩法说明：' + $('#gameHall .hall-howto').textContent.slice(0, 18) + '…');
+  ok($('#gameHall .hs-best').textContent.includes('BEST'), '舞台显示最高分：' + $('#gameHall .hs-best').textContent);
+  const backBtn = $('#gameHall .hall-btn');
+  if (backBtn) {
+    backBtn.click();
+    ok($('#gameHall .hall-menu').hidden === false, '「回大厅」能退回菜单');
+  }
+} else {
+  ok(false, '找到游戏卡片');
+}
+tabs[5].click();
 ok($('#panel-report').hidden === false, '切换到疗愈周报面板');
 tabs[0].click();
 
@@ -455,11 +527,11 @@ ok($('#storyEndingCard').hidden === true && $('#storyScene').textContent.include
   $('#storyScene').textContent);
 
 /* 疗愈周报 */
-tabs[4].click();
+tabs[5].click();
 ok($('#panel-report').hidden === false, '周报面板可见');
 ok($('#reportEmpty').hidden === true, '有数据时不显示空状态');
 ok($('#reportSummary').textContent.includes('被哄了'), '周报小结已生成：' + $('#reportSummary').textContent.slice(0, 22) + '…');
-ok($$('#reportStats .report-stat').length === 5, '统计小卡 5 个', String($$('#reportStats .report-stat').length));
+ok($$('#reportStats .report-stat').length === 6, '统计小卡 6 个', String($$('#reportStats .report-stat').length));
 ok($$('#reportChart .report-col').length === 7, '近 7 天柱状图 7 列', String($$('#reportChart .report-col').length));
 ok($$('#reportTags .report-tag').length >= 1, '高频关键词标签已生成');
 $('#reportCopy').click();
@@ -490,12 +562,7 @@ ok(afterReset.energy === 0, '清空后疗愈指数归零', String(afterReset.ene
 /* 深链：#tab=game 直达小游戏面板 */
 boot('#tab=game');
 try {
-  runScript('data-moods.js');
-  runScript('data-scenes.js');
-  runScript('data-story.js');
-  runScript('engine.js');
-  runScript('audio.js');
-  runScript('app.js');
+  loadApp();
 } catch (e) {
   ok(false, '深链场景脚本加载无异常', e && e.message);
 }
@@ -506,12 +573,7 @@ ok($$('#storyChoices .choice-btn').length >= 2, '深链场景故事选项已渲�
 /* 深链：#tab=fish 直达摸鱼补给站 */
 boot('#tab=fish');
 try {
-  runScript('data-moods.js');
-  runScript('data-scenes.js');
-  runScript('data-story.js');
-  runScript('engine.js');
-  runScript('audio.js');
-  runScript('app.js');
+  loadApp();
 } catch (e) {
   ok(false, '深链场景脚本加载无异常', e && e.message);
 }
@@ -521,28 +583,18 @@ ok($$('.sound-btn').length === 6, '深链场景背景音按钮渲染 6 个');
 /* 深链：#tab=report 直达疗愈周报 */
 boot('#tab=report', seed);
 try {
-  runScript('data-moods.js');
-  runScript('data-scenes.js');
-  runScript('data-story.js');
-  runScript('engine.js');
-  runScript('audio.js');
-  runScript('app.js');
+  loadApp();
 } catch (e) {
   ok(false, '深链场景脚本加载无异常', e && e.message);
 }
 ok($('#panel-report').hidden === false, '深链 #tab=report 直接打开疗愈周报面板');
 ok($('#reportEmpty').hidden === true, '深链场景下沿用历史记录，周报有数据');
-ok($$('#reportStats .report-stat').length === 5, '深链场景统计小卡 5 个');
+ok($$('#reportStats .report-stat').length === 6, '深链场景统计小卡 6 个');
 
 /* 记忆上次心情：带着旧记录重新进入 */
 boot('', seed);
 try {
-  runScript('data-moods.js');
-  runScript('data-scenes.js');
-  runScript('data-story.js');
-  runScript('engine.js');
-  runScript('audio.js');
-  runScript('app.js');
+  loadApp();
 } catch (e) {
   ok(false, '重进场景脚本加载无异常', e && e.message);
 }

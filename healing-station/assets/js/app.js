@@ -145,6 +145,7 @@
       p.hidden = !on;
     });
     if (target === 'panel-report') renderReport();
+    if (target === 'panel-games') mountGameHall();
   }
 
   function initTabs() {
@@ -521,7 +522,7 @@
       var data = loadStore();
       var days = data.days || {};
       var key = today();
-      var rec = days[key] || { d: 0, r: 0, f: 0, p: 0, s: 0, moods: {}, ends: {} };
+      var rec = days[key] || { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, moods: {}, ends: {} };
       rec[kind] = (rec[kind] || 0) + 1;
       if (extra && extra.mood) {
         rec.moods = rec.moods || {};
@@ -575,7 +576,8 @@
       { n: rep.totals.r, label: '话术', emoji: '💬' },
       { n: rep.totals.f, label: '摸鱼', emoji: '🐟' },
       { n: rep.totals.p, label: '专注', emoji: '⏳' },
-      { n: rep.totals.s, label: '通关', emoji: '🎲' }
+      { n: rep.totals.s, label: '通关', emoji: '🎲' },
+      { n: rep.totals.g, label: '游戏', emoji: '🎮' }
     ];
     cards.forEach(function (c) {
       var box = el('div', 'report-stat');
@@ -640,6 +642,18 @@
     box.hidden = false;
   }
 
+  /* ---------- 模块六：摸鱼游戏厅 ---------- */
+
+  // 游戏厅：进 tab 时才挂载，省得拖慢首屏
+  function mountGameHall() {
+    var box = $('#gameHall');
+    if (!box) return;
+    if (!window.HS_HALL) return;
+    if (window.HS_HALL.instance && window.HS_HALL.instance.root &&
+        window.HS_HALL.instance.root.parentNode === box) return;
+    window.HS_HALL.mount(box);
+  }
+
   /* ---------- 初始化 ---------- */
   function init() {
     var store = loadStore();
@@ -659,8 +673,8 @@
 
     initTabs();
 
-    // 深链：#tab=fish / #tab=game / #tab=talk / #tab=clinic / #tab=report 直接打开对应面板
-    var deep = /#tab=(clinic|talk|fish|game|report)/.exec(location.hash || '');
+    // 深链：#tab=fish / #tab=game / #tab=games / #tab=talk / #tab=clinic / #tab=report 直接打开对应面板
+    var deep = /#tab=(clinic|talk|fish|games|game|report)/.exec(location.hash || '');
     if (deep) activateTab('panel-' + deep[1]);
 
     // 头部的疗愈指数：点击直达周报
@@ -755,6 +769,27 @@
     if (sRestart) sRestart.addEventListener('click', storyRestart);
     var sPath = $('#storyPathBtn');
     if (sPath) sPath.addEventListener('click', storyShowPath);
+
+    // 摸鱼游戏厅
+    mountGameHall();
+    if (window.HS_HALL) {
+      window.HS_HALL.onFinish = function (id, score) {
+        try {
+          var data = loadStore();
+          var days = data.days || {};
+          var key = today();
+          var rec = days[key] || { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, moods: {}, ends: {} };
+          rec.g = (rec.g || 0) + 1;
+          rec.games = rec.games || {};
+          rec.games[id] = (rec.games[id] || 0) + 1;
+          rec.best = rec.best || {};
+          rec.best[id] = Math.max(rec.best[id] || 0, score || 0);
+          days[key] = rec;
+          saveStore({ days: days });
+          renderReport();
+        } catch (e) { /* 统计失败不影响游戏 */ }
+      };
+    }
 
     // 疗愈周报
     renderReport();

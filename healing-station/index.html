@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>打工人急救站 · 一个只负责哄你的小站</title>
-<meta name="description" content="打工人急救站：情绪急诊室、社恐话术机、摸鱼补给站、今日生存小游戏。把上班的苦，兑换成一点甜。">
+<meta name="description" content="打工人急救站：情绪急诊室、社恐话术机、摸鱼补给站、今日生存小游戏、摸鱼游戏厅。把上班的苦，兑换成一点甜。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🚑%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/styles.css">
+<link rel="stylesheet" href="games/games.css">
 </head>
 <body>
 <a class="skip-link" href="#main">跳到主要内容</a>
@@ -43,6 +44,7 @@
   <button class="tab" role="tab" id="tab-talk" aria-controls="panel-talk" aria-selected="false" type="button">💬 社恐话术机</button>
   <button class="tab" role="tab" id="tab-fish" aria-controls="panel-fish" aria-selected="false" type="button">🐟 摸鱼补给站</button>
   <button class="tab" role="tab" id="tab-game" aria-controls="panel-game" aria-selected="false" type="button">🎲 今日生存小游戏</button>
+  <button class="tab" role="tab" id="tab-games" aria-controls="panel-games" aria-selected="false" type="button">🎮 摸鱼游戏厅</button>
   <button class="tab" role="tab" id="tab-report" aria-controls="panel-report" aria-selected="false" type="button">📈 疗愈周报</button>
 </nav>
 
@@ -191,6 +193,15 @@
       </div>
     </div>
   </section>
+  <!-- ============ 摸鱼游戏厅 ============ -->
+  <section class="panel" id="panel-games" role="tabpanel" aria-labelledby="tab-games" tabindex="-1" hidden>
+    <div class="card">
+      <h2 class="card-title">摸鱼游戏厅</h2>
+      <p class="card-hint">点开就能玩的像素小游戏：一局一分钟，手残也能玩。所有画面由代码现场画出来，不加载任何图片和音频文件。</p>
+      <div id="gameHall"></div>
+      <p class="tip">想把你 favorite 的这一款单独放进自己的网页？用 <b>&lt;iframe src="games/index.html?game=mole"&gt;</b> 就行。</p>
+    </div>
+  </section>
   <!-- ============ 疗愈周报 ============ -->
   <section class="panel" id="panel-report" role="tabpanel" aria-labelledby="tab-report" tabindex="-1" hidden>
     <div class="card">
@@ -231,7 +242,7 @@
     <span class="gh-dot">·</span>
     <a class="gh-link" href="https://iphsiibl.github.io/healing-station/" target="_blank" rel="noopener noreferrer">🌐 在线体验</a>
   </p>
-  <p class="version">v1.3.0 · 数据只存在你自己的浏览器里，不上传</p>
+  <p class="version">v1.4.1 · 数据只存在你自己的浏览器里，不上传</p>
 </footer>
 
 <div class="boss-screen" id="bossScreen" role="dialog" aria-modal="true" aria-label="正在开会" tabindex="-1" hidden>
@@ -264,6 +275,13 @@
 <script src="assets/js/data-story.js"></script>
 <script src="assets/js/engine.js"></script>
 <script src="assets/js/audio.js"></script>
+<script src="games/pixel.js"></script>
+<script src="games/sprites.js"></script>
+<script src="games/game-mole.js"></script>
+<script src="games/game-dodge.js"></script>
+<script src="games/game-match3.js"></script>
+<script src="games/game-fish.js"></script>
+<script src="games/hall.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>

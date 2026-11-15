@@ -23,11 +23,12 @@
 
 「打工人急救站」是一个把日常职场烦恼翻译成玩笑和安慰的地方：
 发一张诊断单、抄一句能直接发出去的话、放一段雨声假装在工作，
-或者在一部只有几个按钮的职场生存剧里，看看今天能不能准时下班。
+在一部只有几个按钮的职场生存剧里看看今天能不能准时下班，
+或者去像素游戏厅摸一把鱼、躲一次老板。
 
 **全部数据只存在你自己的浏览器里**（`localStorage`），不联网、不上传、没有账号、没有埋点。
 
-## 五个模块
+## 六个模块
 
 | 模块 | 你说 | 它给你 |
 | --- | --- | --- |
@@ -35,7 +36,8 @@
 | 💬 **社恐话术机** | 你今天遇到了什么场面（老板催 / 被甩锅 / 临时改需求 / 被 @ / 不会拒绝 / 不想加班…） | 16 个场景 × 3 种语气（🙈 怂 · 🧊 稳 · 🎪 浪）× 3 句话 = 144 条可直接复制的话术 |
 | 🐟 **摸鱼补给站** | 想假装在工作 | 6 种算法实时合成的环境音（雨 / 咖啡馆 / 地铁 / 空调 / 海浪 / 翻书）、番茄钟、老板键（Esc 一键伪装成会议） |
 | 🎲 **今日生存小游戏** | 今天能准时下班吗？ | 40+ 节点 / 6 个结局的分支职场生存剧，带心值和路径回顾 |
-| 📈 **疗愈周报** | 这周你被哄了几次？ | 7 天汇总、5 张统计卡、柱状图、高频关键词，一键复制成周报 |
+| 🎮 **摸鱼游戏厅** | 想摸鱼，但手得动 | 4 款自制像素小游戏：🐹 摸鱼地鼠 · 🏃 老板巡视 · 🧩 工位三消 · 🎣 摸鱼钓鱼，可 iframe 单独嵌入 |
+| 📈 **疗愈周报** | 这周你被哄了几次？ | 7 天汇总、6 张统计卡（含游戏局数）、柱状图、高频关键词，一键复制成周报 |
 
 还有一个小细节：下次打开，站点还记得你上次的心情。
 
@@ -54,17 +56,33 @@ python -m http.server 8000
 # 然后访问 http://localhost:8000/index.html#tab=fish
 ```
 
-深链小抄：`#tab=clinic` / `#tab=talk` / `#tab=fish` / `#tab=game` / `#tab=report`
+深链小抄：`#tab=clinic` / `#tab=talk` / `#tab=fish` / `#tab=game` / `#tab=games` / `#tab=report`
+
+### 单独玩小游戏
+
+主应用里的「🎮 摸鱼游戏厅」之外，每款游戏都有独立可嵌入页：
+
+```
+https://iphsiibl.github.io/healing-station/games/index.html?game=mole
+```
+
+`game` 可选 `mole`（摸鱼地鼠）、`dodge`（老板巡视）、`match3`（工位三消）、`fish`（摸鱼钓鱼）。
+不写 `?game=` 会显示游戏厅菜单。嵌进你自己的页面：
+
+```html
+<iframe src="https://iphsiibl.github.io/healing-station/games/index.html?game=fish" width="480" height="560"></iframe>
+```
 
 ### 跑测试
 
 ```bash
 cd healing-station
-node tools/selftest.js   # 1115 项：数据完整性 / 引擎 / 页面结构 / 文本卫生
-node tools/uitest.js     # 90 项：迷你 DOM + node:vm 无头 UI 冒烟
+node tools/selftest.js   # 1116 项：数据完整性 / 引擎 / 页面结构 / 文本卫生
+node tools/uitest.js     # 99 项：迷你 DOM + node:vm 无头 UI 冒烟（含音频与游戏）
+node tools/gametest.js   # 111 项：像素内核 / 四款游戏的沙盒自检
 ```
 
-两个脚本都只用 Node 内置能力，**不需要 `npm install`**。
+三个脚本都只用 Node 内置能力，**不需要 `npm install`**。
 
 ## 部署到 GitHub Pages
 
@@ -76,7 +94,7 @@ node tools/uitest.js     # 90 项：迷你 DOM + node:vm 无头 UI 冒烟
    **https://iphsiibl.github.io/healing-station/**
 
 工作流会自动识别站点文件放在仓库根目录还是 `healing-station/` 子目录，
-并且只发布 `index.html` + `assets/`（不带上 `tools/`、`versions/`），体积很小、加载很快。
+并且只发布 `index.html` + `assets/` + `games/`（不带上 `tools/`、`versions/`），体积很小、加载很快。
 
 也可以在 Actions 页面点 **Run workflow** 手动触发一次发布。
 
@@ -84,7 +102,7 @@ node tools/uitest.js     # 90 项：迷你 DOM + node:vm 无头 UI 冒烟
 
 ```
 healing-station/
-├─ index.html                 应用入口（单页，五个模块）
+├─ index.html                 应用入口（单页，六个模块）
 ├─ assets/
 │  ├─ styles.css              奶油纸 + 柔和光晕视觉体系、夜间模式、响应式
 │  └─ js/
@@ -94,12 +112,24 @@ healing-station/
 │     ├─ engine.js            纯逻辑引擎（诊断 / 话术 / 故事 / 周报汇总）
 │     ├─ audio.js             Web Audio 环境音实时合成（零音频文件）
 │     └─ app.js               界面渲染与交互
+├─ games/                     像素摸鱼游戏厅（可独立嵌入）
+│  ├─ index.html              独立嵌入页（?game=mole / dodge / match3 / fish）
+│  ├─ pixel.js                像素内核（调色板 / 原语 / 位图字体 / 音效 / 舞台）
+│  ├─ sprites.js              点阵素材库与办公室场景
+│  ├─ game-mole.js            🐹 摸鱼地鼠
+│  ├─ game-dodge.js           🏃 老板巡视
+│  ├─ game-match3.js          🧩 工位三消
+│  ├─ game-fish.js            🎣 摸鱼钓鱼
+│  ├─ hall.js                 游戏厅（卡片菜单 / 舞台 / 结算）
+│  └─ games.css               大厅与舞台样式
 ├─ tools/
-│  ├─ selftest.js             零依赖自检（1115 项）
-│  └─ uitest.js               迷你 DOM 无头 UI 测试（90 项）
-└─ versions/                  v1.0.0 / v1.1.0 / v1.2.0 / v1.2.1 / v1.3.0 各版完整快照
+│  ├─ selftest.js             零依赖自检（1116 项）
+│  ├─ uitest.js               迷你 DOM 无头 UI 测试（99 项）
+│  └─ gametest.js             游戏内核与四款游戏沙盒自检（111 项）
+└─ versions/                  v1.0.0 / v1.1.0 / v1.2.0 / v1.2.1 / v1.3.0 / v1.4.0 / v1.4.1 各版完整快照
 
 .github/workflows/pages.yml   GitHub Pages 自动发布
+research/                     像素游戏的调研报告与方案 / 执行计划文档
 创作说明.md                   完整创作说明（主题 / 调研 / 流程 / 迭代记录 / 技术踩坑）
 ```
 
@@ -108,6 +138,7 @@ healing-station/
 - **纯静态、零依赖、零构建**：没有框架、没有打包器、没有后端，`index.html` 双击即用；
 - **不用 ES Module**：ES Module 在 `file://` 下会被 CORS 拦截，所以全部走 classic `<script src>` + 全局变量；
 - **音效实时合成**：Web Audio 生成噪声与振荡器，不加载任何音频文件，省流量也不怕资源丢失；
+- **像素游戏也自研内核**：低分辨率画布 + 整数倍放大（`imageSmoothingEnabled=false`）保证像素边缘不糊；时间戳算 dt 并夹紧，避开后台标签页 rAF 暂停导致的物理炸飞；
 - **自建测试环境**：`jsdom` 装不上（网络受限），于是用 Node 内置 `node:vm` + 手写迷你 DOM 做无头 UI 测试；
 - **无障碍**：语义化标签、`aria-*` 状态同步、`:focus-visible` 键盘描边、跳转到主内容链接。
 
@@ -120,6 +151,8 @@ healing-station/
 | v1.2.0 | 疗愈周报、记住上次心情、疗愈指数直达周报、无障碍细节 |
 | v1.2.1 | 修掉摸鱼补给站按钮不响的根因（`new` 返回构造器导致 AudioContext 取到类），并把播放链路纳入自动化回归 |
 | v1.3.0 | GitHub Pages 自动发布工作流 + 页面上的 GitHub 标识与仓库地址；并修掉 `hidden` 属性被 `display:flex` 覆盖导致的空白横条 |
+| v1.4.0 | 像素摸鱼游戏厅：调研 → 方案 → 执行计划留档，自研像素内核与 4 款小游戏，接入主应用新 tab 与周报统计 |
+| v1.4.1 | 画风打磨（墙纸 / 海报 / 桌沿小物 / HUD 对比度）、修掉独立嵌入页 `hidden` 被覆盖、测试扩到 99+111 项 |
 
 ## 隐私
 

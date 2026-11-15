@@ -45,6 +45,10 @@ jobs:
           mkdir -p _site
           cp -R "$SRC/index.html" _site/
           cp -R "$SRC/assets" _site/
+          # 摸鱼游戏厅（可独立嵌入的像素小游戏）
+          if [ -d "$SRC/games" ]; then
+            cp -R "$SRC/games" _site/
+          fi
           # 关闭 Jekyll 处理，保证所有文件原样发布
           touch _site/.nojekyll
           echo "站点文件已就绪："

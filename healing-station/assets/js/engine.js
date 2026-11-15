@@ -352,7 +352,7 @@
     var base = new Date(String(todayStr || '') + 'T00:00:00');
     if (isNaN(base.getTime())) base = new Date();
 
-    var list = [], totals = { d: 0, r: 0, f: 0, p: 0, s: 0 }, moods = {}, ends = {}, max = 0;
+    var list = [], totals = { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0 }, moods = {}, ends = {}, max = 0;
     for (var i = span - 1; i >= 0; i--) {
       var dt = new Date(base.getTime() - i * 86400000);
       var key = dayKey(dt);
@@ -366,16 +366,17 @@
         f: rec ? (rec.f || 0) : 0,
         p: rec ? (rec.p || 0) : 0,
         s: rec ? (rec.s || 0) : 0,
+        g: rec ? (rec.g || 0) : 0,
         total: 0
       };
-      row.total = row.d + row.r + row.f + row.p + row.s;
+      row.total = row.d + row.r + row.f + row.p + row.s + row.g;
       if (rec && rec.moods) {
         for (var mk in rec.moods) if (Object.prototype.hasOwnProperty.call(rec.moods, mk)) moods[mk] = (moods[mk] || 0) + rec.moods[mk];
       }
       if (rec && rec.ends) {
         for (var ek in rec.ends) if (Object.prototype.hasOwnProperty.call(rec.ends, ek)) ends[ek] = (ends[ek] || 0) + rec.ends[ek];
       }
-      totals.d += row.d; totals.r += row.r; totals.f += row.f; totals.p += row.p; totals.s += row.s;
+      totals.d += row.d; totals.r += row.r; totals.f += row.f; totals.p += row.p; totals.s += row.s; totals.g += row.g;
       if (row.total > max) max = row.total;
       list.push(row);
     }
@@ -385,7 +386,7 @@
       max: max,
       moods: moods,
       ends: ends,
-      total: totals.d + totals.r + totals.f + totals.p + totals.s,
+      total: totals.d + totals.r + totals.f + totals.p + totals.s + totals.g,
       topMood: topKey(moods),
       topEnding: topKey(ends)
     };
@@ -402,6 +403,7 @@
     if (rep.totals.f) bits.push('摸鱼 ' + rep.totals.f + ' 次');
     if (rep.totals.p) bits.push('专注 ' + rep.totals.p + ' 次');
     if (rep.totals.s) bits.push('通关 ' + rep.totals.s + ' 次');
+    if (rep.totals.g) bits.push('游戏 ' + rep.totals.g + ' 局');
 
     var text = '这周你在急救站被哄了 ' + rep.total + ' 次' + (bits.length ? '（' + bits.join('、') + '）' : '') + '。';
     if (rep.topMood && moodNames && moodNames[rep.topMood]) {
