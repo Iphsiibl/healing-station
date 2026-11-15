@@ -1,0 +1,65 @@
+# 把「打工人急救站」自动发布到 GitHub Pages
+# 触发条件：push 到 main 分支，或在 Actions 页面手动触发
+# 产物地址：https://iphsiibl.github.io/healing-station/
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只跑一次发布任务，避免并发覆盖
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 准备站点目录（自动识别仓库结构）
+        run: |
+          set -e
+          # 兼容两种放法：站点文件直接放仓库根目录，或放在 healing-station/ 子目录
+          if [ -f index.html ]; then
+            SRC="."
+          elif [ -f healing-station/index.html ]; then
+            SRC="healing-station"
+          else
+            echo "::error::找不到 index.html，无法发布"
+            exit 1
+          fi
+          echo "站点源目录：$SRC"
+          rm -rf _site
+          mkdir -p _site
+          cp -R "$SRC/index.html" _site/
+          cp -R "$SRC/assets" _site/
+          # 关闭 Jekyll 处理，保证所有文件原样发布
+          touch _site/.nojekyll
+          echo "站点文件已就绪："
+          ls -la _site
+
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: 上传站点文件
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: 发布到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>打工人急救站 · 一个只负责哄你的小站</title>
+<meta name="description" content="打工人急救站：情绪急诊室、社恐话术机、摸鱼补给站、今日生存小游戏。把上班的苦，兑换成一点甜。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🚑%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<div class="bg-deco" aria-hidden="true">
+  <span class="blob blob-1">☕</span>
+  <span class="blob blob-2">🌙</span>
+  <span class="blob blob-3">🫧</span>
+  <span class="blob blob-4">🌿</span>
+  <span class="blob blob-5">🍮</span>
+</div>
+
+<header class="site-header">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">🚑</span>
+    <div class="brand-text">
+      <h1>打工人急救站</h1>
+      <p class="brand-sub">不解决你的问题，只负责哄你开心</p>
+    </div>
+  </div>
+  <div class="header-tools">
+    <span class="chip" id="energyChip" title="今天你使用本站的次数">疗愈指数 0</span>
+    <button class="chip-btn" id="themeToggle" type="button" aria-pressed="false">🌗 夜晚模式</button>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="功能模块">
+  <button class="tab is-active" role="tab" id="tab-clinic" aria-controls="panel-clinic" aria-selected="true" type="button">🏥 情绪急诊室</button>
+  <button class="tab" role="tab" id="tab-talk" aria-controls="panel-talk" aria-selected="false" type="button">💬 社恐话术机</button>
+</nav>
+
+<main id="main">
+  <!-- ============ 情绪急诊室 ============ -->
+  <section class="panel is-active" id="panel-clinic" role="tabpanel" aria-labelledby="tab-clinic" tabindex="-1">
+    <form class="card" id="clinicForm" novalidate>
+      <h2 class="card-title">今天，你是什么状态？</h2>
+      <p class="card-hint">选一个最接近的。选不出来也没关系，最下面那个「说不清」也算数。</p>
+
+      <div class="mood-grid" id="moodGrid" role="radiogroup" aria-label="选择今天的心情"></div>
+
+      <label class="field" for="clinicKeyword">
+        <span class="field-label">想说说具体发生了什么吗？（可留空）</span>
+        <input id="clinicKeyword" type="text" maxlength="40" autocomplete="off"
+               placeholder="例如：加班 / 开会 / 被抢功 / 地铁挤成饼 / 老板又改需求">
+      </label>
+
+      <div class="btn-row">
+        <button class="btn primary" type="submit">🩺 给我开张诊断单</button>
+        <button class="btn ghost" type="button" id="clinicAgain">🎲 换一张诊断单</button>
+      </div>
+    </form>
+
+    <div class="result-card" id="clinicResult" hidden aria-live="polite">
+      <div class="stamp" aria-hidden="true">已诊断 · 不收费</div>
+      <p class="result-kicker" id="clinicMoodName">诊断书</p>
+      <h3 class="result-title" id="clinicTitle"></h3>
+      <p class="result-cause" id="clinicCause"></p>
+      <h4 class="result-sub">🧪 病历分析</h4>
+      <ul class="result-list" id="clinicAnalysis"></ul>
+      <h4 class="result-sub">💊 今日处方</h4>
+      <ul class="result-list remedies" id="clinicRemedies"></ul>
+      <h4 class="result-sub">💌 来自值班护士的话</h4>
+      <p class="result-blessing" id="clinicBlessing"></p>
+      <div class="btn-row">
+        <button class="btn ghost" type="button" id="clinicCopy">📋 复制诊断单</button>
+        <button class="btn ghost" type="button" id="clinicShare">🔗 复制分享链接</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 社恐话术机 ============ -->
+  <section class="panel" id="panel-talk" role="tabpanel" aria-labelledby="tab-talk" tabindex="-1" hidden>
+    <div class="card">
+      <h2 class="card-title">遇到什么场面了？</h2>
+      <p class="card-hint">挑一个最像你今天的，点一下。话术分三档：<b>怂</b>（安全牌）、<b>稳</b>（专业但有边界）、<b>浪</b>（幽默，胆子大）。</p>
+      <div class="scene-grid" id="sceneGrid" role="group" aria-label="选择职场场景"></div>
+    </div>
+
+    <div class="result-card" id="talkResult" hidden aria-live="polite">
+      <p class="result-kicker" id="talkSceneName">话术</p>
+      <h3 class="result-title" id="talkTitle"></h3>
+      <div class="tone-tabs" role="tablist" aria-label="选择语气">
+        <button class="tone-btn is-active" role="tab" data-tone="safe" aria-selected="true" type="button">🙈 怂 · 安全牌</button>
+        <button class="tone-btn" role="tab" data-tone="pro" aria-selected="false" type="button">🧊 稳 · 有边界</button>
+        <button class="tone-btn" role="tab" data-tone="wild" aria-selected="false" type="button">🎪 浪 · 胆子大</button>
+      </div>
+      <div class="reply-card" id="replyCard">
+        <p class="reply-text" id="replyText"></p>
+        <div class="btn-row">
+          <button class="btn primary" type="button" id="replyCopy">📋 复制这句</button>
+          <button class="btn ghost" type="button" id="replyReroll">🔁 换一句</button>
+        </div>
+      </div>
+      <p class="tip" id="talkTip"></p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <p>本站不提供医疗、法律或职业建议，只提供情绪上的一个沙发 🛋️　·　<a href="#" id="resetData">清空我的本地记录</a></p>
+  <p class="version">v1.0.0 · 纯本地运行，不上传任何数据</p>
+</footer>
+
+<script src="assets/js/data-moods.js"></script>
+<script src="assets/js/data-scenes.js"></script>
+<script src="assets/js/engine.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
