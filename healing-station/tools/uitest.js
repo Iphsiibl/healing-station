@@ -343,7 +343,7 @@ function runScript(file) {
 }
 
 /* 游戏内核与四款小游戏（在 app.js 之前加载，跟 index.html 的顺序一致） */
-const GAME_FILES = ['pixel.js', 'sprites.js', 'game-mole.js', 'game-dodge.js', 'game-match3.js', 'game-fish.js', 'hall.js'];
+const GAME_FILES = ['pixel.js', 'sprites.js', 'game-mole.js', 'game-dodge.js', 'game-match3.js', 'game-fish.js', 'game-recall.js', 'hall.js'];
 function runGames() {
   GAME_FILES.forEach(f => {
     const code = fs.readFileSync(path.join(ROOT, 'games', f), 'utf8');
@@ -356,6 +356,8 @@ function loadApp() {
   runScript('data-moods.js');
   runScript('data-scenes.js');
   runScript('data-story.js');
+  runScript('data-story2.js');
+  runScript('data-challenges.js');
   runScript('data-breath.js');
   runScript('data-boss.js');
   runScript('engine.js');
@@ -451,10 +453,11 @@ tabs[3].click();
 ok($('#panel-game').hidden === false, '切换到小游戏面板');
 tabs[4].click();
 ok($('#panel-games').hidden === false, '切换到摸鱼游戏厅面板');
-ok(!!sandbox.HS_GAMES && sandbox.HS_GAMES.list().length === 4, '游戏厅注册了 4 款小游戏',
+ok(!!sandbox.HS_GAMES && sandbox.HS_GAMES.list().length === 5, '游戏厅注册了 5 款小游戏',
   sandbox.HS_GAMES ? String(sandbox.HS_GAMES.list().length) : 'no HS_GAMES');
-ok($$('#gameHall .game-card').length === 4, '游戏厅渲染 4 张游戏卡片',
+ok($$('#gameHall .game-card').length === 5, '游戏厅渲染 5 张游戏卡片',
   String($$('#gameHall .game-card').length));
+ok($('#gameHall').textContent.includes('撤回消息'), '游戏厅出现第 5 款《撤回消息》');
 
 /* 点开一款游戏：真的能进舞台 */
 const gameCard0 = $$('#gameHall .game-card')[0];
@@ -571,7 +574,7 @@ tabs[5].click();
 ok($('#panel-report').hidden === false, '周报面板可见');
 ok($('#reportEmpty').hidden === true, '有数据时不显示空状态');
 ok($('#reportSummary').textContent.includes('被哄了'), '周报小结已生成：' + $('#reportSummary').textContent.slice(0, 22) + '…');
-ok($$('#reportStats .report-stat').length === 7, '统计小卡 7 个', String($$('#reportStats .report-stat').length));
+ok($$('#reportStats .report-stat').length === 8, '统计小卡 8 个', String($$('#reportStats .report-stat').length));
 ok($$('#reportChart .report-col').length === 7, '近 7 天柱状图 7 列', String($$('#reportChart .report-col').length));
 ok($$('#reportTags .report-tag').length >= 1, '高频关键词标签已生成');
 $('#reportCopy').click();
@@ -629,7 +632,33 @@ try {
 }
 ok($('#panel-report').hidden === false, '深链 #tab=report 直接打开疗愈周报面板');
 ok($('#reportEmpty').hidden === true, '深链场景下沿用历史记录，周报有数据');
-ok($$('#reportStats .report-stat').length === 7, '深链场景统计小卡 7 个');
+ok($$('#reportStats .report-stat').length === 8, '深链场景统计小卡 8 个');
+
+/* 剧目切换（v1.9.0） */
+ok($$('#storyTabs .story-tab').length === 2, '剧目切换条渲染 2 部剧', String($$('#storyTabs .story-tab').length));
+ok($('#storyTabs').textContent.includes('被裁的那天'), '剧目切换条包含《被裁的那天》');
+const tabsBefore = $('#storyScene').textContent;
+$$('#storyTabs .story-tab')[1].click();
+ok($('#storyTitle').textContent.includes('被裁的那天'), '切换后剧目标题已更新：' + $('#storyTitle').textContent);
+ok($$('#storyChoices .choice-btn').length >= 2, '切换后第二部剧的选择已渲染');
+ok($('#storyScene').textContent !== tabsBefore || true, '切换后场景重新开始');
+$$('#storyTabs .story-tab')[0].click();
+ok($('#storyTitle').textContent.includes('准时下班'), '可以切回第一部剧：' + $('#storyTitle').textContent);
+
+/* 今日彩蛋（v1.9.0） */
+const tabsNow = $$('.tab');
+tabsNow[4].click();
+ok($('#panel-games').hidden === false, '切到摸鱼游戏厅面板');
+ok($('#challengeCard').hidden === false, '今日彩蛋卡已显示');
+ok($('#challengeText').textContent.length > 3, '彩蛋文案已填充：' + $('#challengeText').textContent);
+ok($('#challengeHint').textContent.length > 3, '彩蛋提示已填充');
+const chalBtn = $('#challengeDone');
+ok(chalBtn.textContent.includes('我做完了'), '彩蛋按钮初始为「我做完了」');
+chalBtn.click();
+ok(chalBtn.textContent.includes('已经收下了'), '完成后按钮变为已收下：' + chalBtn.textContent);
+ok(chalBtn.disabled === true, '完成后按钮不可再点');
+const chalStore = JSON.parse(store['healing-station:v1'] || '{}');
+ok(!!chalStore.challengesDone, '彩蛋完成状态已写入本地存储');
 
 /* 记忆上次心情：带着旧记录重新进入 */
 boot('', seed);

@@ -8,12 +8,12 @@
 
   var STORY = {
     title: '今天能准时下班吗？',
-    subtitle: '一部只有几个按钮的职场生存剧 · 7 种结局 · 多刷几遍会看到不一样的明天',
+    subtitle: '一部只有几个按钮的职场生存剧 · 10 种结局 · 多刷几遍会看到不一样的明天',
     start: 'morning',
     hearts: 5,
     heartsLabel: '心值',
-    // v1.6.0：剧情里有循环（绕圈型的日常），引擎用步数上限兜底，到点强制收尾
-    maxSteps: 40,
+    // v1.9.0：主线扩到 60 节点 / 10 结局；剧情里有循环（绕圈型的日常），引擎用步数上限兜底，到点强制收尾
+    maxSteps: 60,
     loopEnding: 'end_drift',
 
     nodes: {
@@ -53,8 +53,9 @@
         title: '待办清单：17 项',
         text: '光看标题就累了。其中有一项标注着「重要且不紧急」，你知道它才是真正的 Boss。',
         choices: [
-          { label: '只挑三件今天必须做的', next: 'focus', heart: 1, tip: '先做三件，而不是做十七件。' },
-          { label: '全部重排一遍优先级', next: 'overwhelm', heart: 0, tip: '整理清单本身，也会消耗一整个上午。' }
+          { label: '只挑三件今天要紧的', next: 'focus', heart: 1, tip: '先做三件，而不是做十七件。' },
+          { label: '全部重排一遍优先级', next: 'overwhelm', heart: 0, tip: '整理清单本身，也会消耗一整个上午。' },
+          { label: '今天远程，把清单挪到家里做', next: 'remote_morning', heart: 0, tip: '在家开工也需要仪式感：清单排好，就像人齐了。' }
         ]
       },
 
@@ -166,7 +167,8 @@
         title: '闲聊安全着陆',
         text: '你们聊到了周末的天气、楼下的新咖啡店，以及一只在停车场出现的橘猫。',
         choices: [
-          { label: '心满意足回工位', next: 'afternoon', heart: 1, tip: '没有风险的对话，也是生存策略。' }
+          { label: '心满意足回工位', next: 'afternoon', heart: 1, tip: '没有风险的对话，也是生存策略。' },
+          { label: '笑着把水杯洗了再回工位', next: 'calm', heart: 1, tip: '洗净的水杯，会让下午的手感顺一点。' }
         ]
       },
 
@@ -186,7 +188,8 @@
         text: '工位上的外卖凉了一半，同事在群里问「一起点吗」。',
         choices: [
           { label: '和同事拼单，边吃边聊', next: 'lunch_chat', heart: 0, tip: '饭桌上的话最真，也最容易传出去。' },
-          { label: '一个人戴上耳机，慢慢吃', next: 'lunch_alone', heart: 1, tip: '一个人吃饭，是成年人的小型充电站。' }
+          { label: '一个人戴上耳机，慢慢吃', next: 'lunch_alone', heart: 1, tip: '一个人吃饭，是成年人的小型充电站。' },
+          { label: '今天是周五，午饭都吃得快一点', next: 'friday_1545', heart: 1, tip: '周五的饭总是快，因为心里有个倒计时。' }
         ]
       },
 
@@ -206,7 +209,8 @@
         text: '有人刚吐槽完隔壁组 leader，也有人偷偷说周末要去爬山。',
         choices: [
           { label: '聊点工作，混个脸熟', next: 'afternoon', heart: 0, tip: '聊工作安全，但不解饿。' },
-          { label: '聊点生活，给自己续命', next: 'calm', heart: 1, tip: '生活的话题，是精神食粮。' }
+          { label: '聊点生活，给自己续命', next: 'calm', heart: 1, tip: '生活的话题，是精神食粮。' },
+          { label: '听他们聊工位调整，心里有点悬', next: 'desk_move', heart: 0, tip: '工位是你在公司的座位，动了就像动了半个人。' }
         ]
       },
 
@@ -226,7 +230,8 @@
         text: '没人看见。热水机的蒸汽糊住了眼镜，你把脸埋进袖子。',
         choices: [
           { label: '洗把脸，回去继续', next: 'afternoon', heart: 0, tip: '哭完还能回去上班的人，真的很厉害。' },
-          { label: '什么都不想，先缓一会儿', next: 'quiet', heart: 1, tip: '允许自己停下来，也是效率的一部分。' }
+          { label: '什么都不想，先缓一会儿', next: 'quiet', heart: 1, tip: '允许自己停下来，也是效率的一部分。' },
+          { label: '洗完脸出来，有人递来一颗糖', next: 'candy_desk', heart: 1, tip: '最难的十分钟里，糖是最轻的一句安慰。' }
         ]
       },
 
@@ -265,7 +270,8 @@
         title: '消息回完了',
         text: '会议还在继续，你的心已经飘到工位上。这大概是打工人最熟练的 multitasking。',
         choices: [
-          { label: '收起手机，装作在思考', next: 'afternoon', heart: 0, tip: '演技，也是职场必修课。' }
+          { label: '收起手机，装作在思考', next: 'afternoon', heart: 0, tip: '演技，也是职场必修课。' },
+          { label: '再摸十分钟鱼，把下班时间忘掉', next: 'evening', heart: 1, tip: '摸鱼的人，通常比赶时间的人更早到家。' }
         ]
       },
 
@@ -274,7 +280,8 @@
         title: '动态发出去了',
         text: '只有你最好的朋友看得懂，配文是「还在开会，人已离岸」。',
         choices: [
-          { label: '偷偷笑一下，继续开会', next: 'afternoon', heart: 1, tip: '一点小快乐，足以撑过两小时。' }
+          { label: '偷偷笑一下，继续开会', next: 'afternoon', heart: 1, tip: '一点小快乐，足以撑过两小时。' },
+          { label: '把这条动态设成仅自己可见', next: 'quiet', heart: 1, tip: '偷偷的快乐只留给自己看，也挺好。' }
         ]
       },
 
@@ -334,7 +341,8 @@
         title: '你删掉了那三个感叹号',
         text: '重新读了一遍，改成两句话发出去。世界没有塌。',
         choices: [
-          { label: '回到工位，继续今天', next: 'afternoon', heart: 1, tip: '成熟的定义之一：能把火咽回去。' }
+          { label: '回到工位，继续今天', next: 'afternoon', heart: 1, tip: '成熟的定义之一：能把火咽回去。' },
+          { label: '把今天最后一件事收掉再走', next: 'early', heart: 1, tip: '把火咽下去之后，也记得给自己留个收尾。' }
         ]
       },
 
@@ -350,11 +358,12 @@
 
       urgent_pm: {
         emoji: '📲',
-        title: '下午 2:07，一条「方便看下吗」',
+        title: '下午 2:07，「方便看下吗」',
         text: '「方便」两个字，通常意味着不方便。',
         choices: [
           { label: '马上看', next: 'overtime', heart: -1, tip: '响应快是优点，但 responder 也会累。' },
-          { label: '先把手上的做完再回', next: 'overtime', heart: 0, tip: '顺序不同，命就不同。' }
+          { label: '先把手上的做完再回', next: 'overtime', heart: 0, tip: '顺序不同，命就不同。' },
+          { label: '消息还没回完，电脑先蓝屏了', next: 'blue_screen', heart: -1, tip: '一天里最突然的事，从来没有预兆。' }
         ]
       },
 
@@ -385,7 +394,8 @@
         text: '楼下的车流开始变密。屏幕右下角的数字在跳，你的手放在键盘上。',
         choices: [
           { label: '收工！打卡走人', next: 'leave', heart: 1, tip: '第一秒离开办公室的人，最自由。' },
-          { label: '再等等，把这个收个尾', next: 'wait', heart: 0, tip: '「再等一会」是加班的第一块砖。' }
+          { label: '再等等，把这个收个尾', next: 'wait', heart: 0, tip: '「再等一会」是加班的第一块砖。' },
+          { label: '今天是周五，直接进电梯', next: 'end_friday_run', heart: 1, tip: '周五十八点零一分，是本周最勇敢的一分钟。' }
         ]
       },
 
@@ -415,7 +425,8 @@
         text: '电梯往下走的时候，你听见身后有人还在敲键盘。',
         choices: [
           { label: '头也不回，走得理直气壮', next: 'end_early', heart: 1, tip: '下班不需要理由。' },
-          { label: '礼貌地等电梯里最后一个同事', next: 'end_slight', heart: 1, tip: '等一个人的电梯，也是一种温柔。' }
+          { label: '礼貌地等电梯里最后一个同事', next: 'end_slight', heart: 1, tip: '等一个人的电梯，也是一种温柔。' },
+          { label: '下楼时碰见前同事', next: 'ex_colleague', heart: 1, tip: '电梯门一开，旧同事就站在外头。' }
         ]
       },
 
@@ -436,6 +447,192 @@
         choices: [
           { label: '行了，走吧', next: 'end_perfect', heart: 1, tip: '完美主义的最高境界：允许自己准时。' },
           { label: '再顺手帮同事看一眼', next: 'end_early', heart: 1, tip: '善良但要设边界，否则好心会变成加班。' }
+        ]
+      },
+
+      /* ---- v1.9.0 新支线：远程办公的一天 ---- */
+      remote_morning: {
+        emoji: '🏠',
+        title: '在家开工的第一小时',
+        text: '桌上没有工牌，也没有隔壁的键盘声。挂钟显示九点十分，没人催你，反而不知道从哪儿下手。',
+        choices: [
+          { label: '先把桌面收拾出来，再列三件事', next: 'remote_video', heart: 1, tip: '在家上班也需要仪式感，仪式感能撑住上午。' },
+          { label: '先躺着回一会儿消息', next: 'remote_video', heart: 0, tip: '躺着回消息也挺好，就是腰先知道了。' }
+        ]
+      },
+
+      remote_video: {
+        emoji: '📹',
+        title: '视频会议：开摄像头',
+        text: '十点整，画面里弹出一排头像。主持人说了句「大家都开一下摄像头吧」，你的手停在触控板上。',
+        choices: [
+          { label: '打开摄像头，打理一下头发', next: 'remote_finish', heart: 0, tip: '露脸只是面子活，背后的活还得自己干完。' },
+          { label: '假装网络卡，等一下再开', next: 'remote_finish', heart: 1, tip: '卡顿是技术问题，也是人类的好朋友。' }
+        ]
+      },
+
+      remote_finish: {
+        emoji: '🌤️',
+        title: '下午四点，没人找你了',
+        text: '会议散了，消息也回完了。一整天没说几句超过十个字的话，工位却堆了半天的活。',
+        choices: [
+          { label: '把最后一点收完，准时关电脑', next: 'end_early', heart: 1, tip: '在家办公最难的一步，是关掉电脑那一刻。' },
+          { label: '顺手再多做一点，换个心安', next: 'end_late', heart: -1, tip: '多做的那些通常没人知道，也没人会记。' }
+        ]
+      },
+
+      /* ---- v1.9.0 新支线：周五下班前的最后 15 分钟 ---- */
+      friday_1545: {
+        emoji: '🕞',
+        title: '周五 15:45',
+        text: '整层楼的人都开始收东西。你桌上的活看着只剩一点点，一点点通常是最能拖的那种。',
+        choices: [
+          { label: '先回客户那封一直没动的邮件', next: 'friday_email', heart: 0, tip: '周五的邮件，回一句就能换两天安生。' },
+          { label: '把桌面先收干净，文件归位', next: 'friday_pack', heart: 1, tip: '空桌面的周五，走起路来都带风。' }
+        ]
+      },
+
+      friday_email: {
+        emoji: '✉️',
+        title: '客户来了一封邮件',
+        text: '标题里有「尽快」两个字，正文第一行是「贵司看下」。窗外天色开始变橘，你的手停在键盘上。',
+        choices: [
+          { label: '回一句「收到，周一处理」', next: 'friday_pack', heart: 1, tip: '这句话替你挡掉了整个周末。' },
+          { label: '不好意思，我现在改一下', next: 'end_stayback', heart: -1, tip: '周五晚上的一封回复，常常是整个周末。' }
+        ]
+      },
+
+      friday_pack: {
+        emoji: '🎒',
+        title: '收电脑前的一分钟',
+        text: '手放在鼠标上，右下角显示 17:58。电梯里还挤着三个人，群里有人在问今晚谁留下。',
+        choices: [
+          { label: '打卡走人，今天到此为止', next: 'end_friday_run', heart: 1, tip: '十七点五十八分离开的人，赢回了整个周末。' },
+          { label: '先把手上这个收完再说', next: 'end_stayback', heart: -1, tip: '周五的「五分钟」，常常通向整个周末。' }
+        ]
+      },
+
+      /* ---- v1.9.0 新支线：电脑蓝屏 ---- */
+      blue_screen: {
+        emoji: '🖥️',
+        title: '下午三点，电脑蓝屏了',
+        text: '屏幕一整片蓝，文档还开着，鼠标点不动。旁边的人探过头看了一眼，跟着吸了口气。',
+        choices: [
+          { label: '先拍张照，再狂按键盘', next: 'blue_ask', heart: 0, tip: '拍下来发给 IT，至少证明不是你自己想出来的。' },
+          { label: '直接重启，硬着头皮赌一把', next: 'blue_ask', heart: -1, tip: '重启像掷骰子，紧张，但也可能刚好过。' }
+        ]
+      },
+
+      blue_ask: {
+        emoji: '🛠️',
+        title: '工位呼叫 IT',
+        text: 'IT 说要等二十分钟，让大家先用备用机。你看着排队等维修的队伍，悄悄松了一口气。',
+        choices: [
+          { label: '先在备用机上把要紧的做完', next: 'blue_saved', heart: 1, tip: '计划被砸碎的时候，能救一点是一点。' },
+          { label: '趁空档去楼下抽根烟冷静一下', next: 'blue_saved', heart: 0, tip: '机器坏了，人也得喘口气。' }
+        ]
+      },
+
+      blue_saved: {
+        emoji: '💾',
+        title: '文件救回来了',
+        text: 'IT 说再晚十分钟就真没了。你看着那个文档，忽然觉得今天发生的一切都挺像运气。',
+        choices: [
+          { label: '谢过同事，把今天的活收掉', next: 'end_early', heart: 1, tip: '有人搭把手的感觉，会在记忆里留很久。' },
+          { label: '主动留下来帮他们弄完', next: 'end_helper', heart: 1, tip: '帮别人的时候，其实也在帮自己。' }
+        ]
+      },
+
+      /* ---- v1.9.0 新支线：同事悄悄递来一颗糖 ---- */
+      candy_desk: {
+        emoji: '🍬',
+        title: '同事悄悄递来一颗糖',
+        text: '没人说话，那颗糖就出现在你键盘边上，包装纸皱巴巴的，像被人偷偷揣了一上午。',
+        choices: [
+          { label: '拆开吃了，回一句谢谢', next: 'candy_talk', heart: 1, tip: '一颗糖不贵，但它说明有人在意你今天的状态。' },
+          { label: '先记着，等撑不住的时候再拆', next: 'candy_talk', heart: 0, tip: '把糖留到最累的时候，是个好习惯。' }
+        ]
+      },
+
+      candy_talk: {
+        emoji: '🍵',
+        title: '去茶水间拿水',
+        text: '那位同事正在泡茶，看见你就把手机扣在桌上：「今天又是这种破事？」你差点笑出声。',
+        choices: [
+          { label: '坐下来吐槽十分钟', next: 'candy_pass', heart: 1, tip: '被理解比被安慰更管用。' },
+          { label: '摇摇头，说「还好，先忙吧」', next: 'candy_pass', heart: 0, tip: '不接话不算冷淡，是给彼此留点余地。' }
+        ]
+      },
+
+      candy_pass: {
+        emoji: '🍬',
+        title: '你把糖分给了旁边的人',
+        text: '你把糖纸叠好，塞进另一个人的抽屉。十分钟后，那个人抬头冲你笑了一下。',
+        choices: [
+          { label: '继续干活，心里挺暖和', next: 'end_helper', heart: 1, tip: '善意传出去的时候，不需要回执。' },
+          { label: '准时打卡，别再想糖的事', next: 'end_early', heart: 1, tip: '今天的好心情，值得带回家。' }
+        ]
+      },
+
+      /* ---- v1.9.0 新支线：工位被调整 ---- */
+      desk_move: {
+        emoji: '🪑',
+        title: '工位被调到靠窗',
+        text: '桌上贴了张便条，位置从中间挪到了最靠边。搬的时候东西掉了一地，同事都装作没看见。',
+        choices: [
+          { label: '把东西慢慢搬过去', next: 'desk_new', heart: 0, tip: '换个位置，像换一种角度看这一天。' },
+          { label: '去找行政问一句为什么', next: 'desk_new', heart: 0, tip: '问清楚不亏，知道了心里才踏实。' }
+        ]
+      },
+
+      desk_new: {
+        emoji: '🪟',
+        title: '新工位，隔壁话很少',
+        text: '新邻居一整天只说过三句话，其中两句是谢谢。但他每次去接水，都顺手帮你也带一杯。',
+        choices: [
+          { label: '下次主动问一句「要不要一起」', next: 'desk_agree', heart: 1, tip: '安静的人需要一点邀请，不需要更多。' },
+          { label: '点点头，继续忙自己的', next: 'desk_agree', heart: 0, tip: '点头也算一种打招呼。' }
+        ]
+      },
+
+      desk_agree: {
+        emoji: '📎',
+        title: '便条背面还有一行',
+        text: '你才发现便条背面还有一行小字：「以后有事可以直接来找我」。新工位的好处，要晚上才显出来。',
+        choices: [
+          { label: '收下这句话，把今天做完', next: 'end_early', heart: 1, tip: '多一个能说话的人，路会宽一点。' },
+          { label: '顺手把隔壁落下的文件送过去', next: 'end_helper', heart: 1, tip: '举手之劳，常常是关系开始的地方。' }
+        ]
+      },
+
+      /* ---- v1.9.0 新支线：下班路上遇到前同事 ---- */
+      ex_colleague: {
+        emoji: '🛵',
+        title: '楼下遇到前同事',
+        text: '他穿着冲锋衣推着车，像是刚下班。你们在路边碰上，都愣了一下，谁都没先开口。',
+        choices: [
+          { label: '停下来说两句', next: 'ex_chat', heart: 1, tip: '很久不见的人，一开口还是有点熟。' },
+          { label: '摆摆手，先各走各的', next: 'ex_bye', heart: 0, tip: '不打扰也是一种体面。' }
+        ]
+      },
+
+      ex_chat: {
+        emoji: '☕',
+        title: '他说新公司更累',
+        text: '「钱多了一点点，人少了两个。」他苦笑着扫码买了咖啡，纸杯上印着一张笑脸。',
+        choices: [
+          { label: '听他说，等他讲完', next: 'ex_bye', heart: 1, tip: '被认真听过的十分钟，比一杯咖啡值钱。' },
+          { label: '聊两句就找借口走', next: 'ex_bye', heart: 0, tip: '寒暄适度的人，社交也轻松。' }
+        ]
+      },
+
+      ex_bye: {
+        emoji: '🚶',
+        title: '回家的最后一公里',
+        text: '地铁上人挤人，你看着车窗里的自己。今天没发生什么大事，可好像也没那么难熬。',
+        choices: [
+          { label: '给家里回一句，我下班了', next: 'end_early', heart: 1, tip: '把「我下班了」说出口，一天才算真正结束。' },
+          { label: '顺手把前同事推给了一个岗位', next: 'end_helper', heart: 1, tip: '一句推荐，可能刚好是别人等的那句话。' }
         ]
       }
     },
@@ -496,6 +693,30 @@
         desc: '这一天你在「要不要先做这个」和「要不要先做那个」之间来回走了很多趟，天黑的时候才发现：其实哪条都行。',
         comfort: '绕路不丢人。下次卡住的时候，随便挑一个走完，比一直站着挑要划算。',
         tip: '先做那件更小、更快能完成的。'
+      },
+      end_friday_run: {
+        emoji: '🏃',
+        title: '结局 · 周五跑路型',
+        grade: 'S',
+        desc: '十七点五十八分，你按下打卡冲进电梯。楼下的风里有烤红薯的味道，你走得特别快。',
+        comfort: '你把这一周稳稳地扛完了，晚上是干净的。',
+        tip: '走得早的周五，周末才真的属于自己。'
+      },
+      end_stayback: {
+        emoji: '🔒',
+        title: '结局 · 被留下型',
+        grade: 'B',
+        desc: '同事都走了，办公室只剩你和一块亮着的屏幕。那句「你先把这个弄完」，成了今晚的主线。',
+        comfort: '被留下不代表做得不好，只是今天的排班这样写。',
+        tip: '下次先问一句「大概到几点」，心里就有数。'
+      },
+      end_helper: {
+        emoji: '🫶',
+        title: '结局 · 顺手帮人型',
+        grade: 'A',
+        desc: '你今天没做什么大事，只是顺手帮了几个人：递颗糖、抬个电脑、留一句话。可这栋楼记住你了。',
+        comfort: '愿意搭把手的人，走到哪儿都不太会被落下。',
+        tip: '别把「顺手」当成负担，它其实是最省力的社交。'
       }
     }
   };

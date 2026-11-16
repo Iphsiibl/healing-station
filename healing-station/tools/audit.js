@@ -686,10 +686,7 @@ function auditFish() {
 /* =========================================================
    模块 D：生存故事
    ========================================================= */
-function auditStory() {
-  var mod = newModule('story', '生存故事', '🎲');
-  var story = require(path.join(JS_DIR, 'data-story.js'));
-  var engine = require(path.join(JS_DIR, 'engine.js'));
+function auditStoryFile(mod, story, engine, label, agg) {
   var nodes = story.nodes || {};
   var endings = story.endings || {};
   var nodeIds = Object.keys(nodes);
@@ -711,8 +708,8 @@ function auditStory() {
     } else {
       pass(mod, '节点「' + id + '」字段完整', 'emoji/title/text/choices 齐全');
     }
-    pool.push({ module: '生存故事', field: '节点「' + id + '」·正文', text: n.text });
-    titlePool.push({ module: '生存故事', field: '节点「' + id + '」·标题', text: n.title });
+    pool.push({ module: label, field: '节点「' + id + '」·正文', text: n.text });
+    titlePool.push({ module: label, field: '节点「' + id + '」·标题', text: n.title });
 
     var nChoice = (n.choices || []).length;
     choiceCount += nChoice;
@@ -730,8 +727,8 @@ function auditStory() {
         warn(mod, '节点「' + id + '」选择 ' + (i + 1) + ' 的 tip', '缺失', '回响文案为空');
       }
       if (c) {
-        choicePool.push({ module: '生存故事', field: '节点「' + id + '」·选项 ' + (i + 1), text: c.label });
-        if (c.tip) pool.push({ module: '生存故事', field: '节点「' + id + '」·回响 ' + (i + 1), text: c.tip });
+        choicePool.push({ module: label, field: '节点「' + id + '」·选项 ' + (i + 1), text: c.label });
+        if (c.tip) pool.push({ module: label, field: '节点「' + id + '」·回响 ' + (i + 1), text: c.tip });
       }
     });
     rows.push([id, n.emoji || '—', brief(n.title, 12), nChoice,
@@ -747,12 +744,12 @@ function auditStory() {
       pass(mod, '结局「' + id + '」字段完整', '6/6 字段齐全');
     }
     ['title', 'desc', 'comfort', 'tip'].forEach(function (f) {
-      if (e[f]) pool.push({ module: '生存故事', field: '结局「' + id + '」·' + f, text: e[f] });
+      if (e[f]) pool.push({ module: label, field: '结局「' + id + '」·' + f, text: e[f] });
     });
   });
 
   // 可达性
-  var reach = engine.storyReach();
+  var reach = engine.storyReach(story.id);
   var reachNodes = Object.keys(reach.nodes || {});
   var reachEnds = Object.keys(reach.endings || {});
   var unreachableNodes = nodeIds.filter(function (id) { return !reach.nodes[id]; });
@@ -899,13 +896,114 @@ function auditStory() {
     pass(mod, '故事正文无近重复', '全部低于 0.75 阈值');
   }
 
-  mod.entries = nodeIds.length;
-  mod.detail = '节点 ' + nodeIds.length + ' · 结局 ' + endIds.length +
+  agg.nodes += nodeIds.length;
+  agg.ends += endIds.length;
+  agg.choices += choiceCount;
+  agg.detail.push(label + '：节点 ' + nodeIds.length + ' · 结局 ' + endIds.length +
     ' · 选项 ' + choiceCount + ' 条 · 可达结局 ' +
     normalEnds.filter(function (id) { return reach.endings[id]; }).length +
     (fallbackId ? '（+1 兜底 ' + fallbackId + '）' : '') +
-    ' · 平均通关 ' + (stat.count ? stat.avg.toFixed(2) : '—') + ' 步';
-  addTable(mod, '节点明细', ['节点 id', 'emoji', '标题', '选项数', '指向有效'], rows);
+    ' · 平均通关 ' + (stat.count ? stat.avg.toFixed(2) : '—') + ' 步');
+  addTable(mod, '节点明细 · ' + label, ['节点 id', 'emoji', '标题', '选项数', '指向有效'], rows);
+  return mod;
+}
+
+/** 载入全部剧目（v1.9.0 起支持多部剧） */
+function loadStories() {
+  var out = [];
+  ['data-story.js', 'data-story2.js'].forEach(function (f) {
+    var p = path.join(JS_DIR, f);
+    if (!fs.existsSync(p)) return;
+    var s = null;
+    try { s = require(p); } catch (e) { return; }
+    if (!s || !s.nodes) return;
+    if (!s.id) s.id = out.length === 0 ? 'today' : ('story' + (out.length + 1));
+    out.push(s);
+  });
+  return out;
+}
+
+/** 生存故事模块（含全部剧目） */
+function auditStory() {
+  var mod = newModule('story', '生存故事', '🎲');
+  var engine = require(path.join(JS_DIR, 'engine.js'));
+  var stories = loadStories();
+  if (!stories.length) {
+    fail(mod, '剧目可载入', '0 部', '找不到 data-story.js');
+    mod.entries = 0;
+    mod.detail = '没有可用剧目';
+    return mod;
+  }
+  pass(mod, '剧目可载入', stories.length + ' 部：' + stories.map(function (s) { return s.title || s.id; }).join(' / '));
+  var agg = { nodes: 0, ends: 0, choices: 0, detail: [] };
+  stories.forEach(function (st) {
+    auditStoryFile(mod, st, engine, st.title || st.id, agg);
+  });
+  mod.entries = agg.nodes;
+  mod.detail = agg.detail.join(' ｜ ');
+  return mod;
+}
+
+/** 每日彩蛋（v1.9.0） */
+function auditChallenges() {
+  var mod = newModule('challenge', '每日彩蛋', '🎯');
+  var p = path.join(JS_DIR, 'data-challenges.js');
+  if (!fs.existsSync(p)) {
+    fail(mod, '彩蛋数据文件存在', 'data-challenges.js', '缺少每日彩蛋数据');
+    mod.entries = 0;
+    return mod;
+  }
+  var data = require(p);
+  var items = data.items || [];
+  pass(mod, '彩蛋数据文件存在', 'data-challenges.js');
+  if (items.length < 12) {
+    fail(mod, '彩蛋数量', items.length + ' 条', '期望 >= 12 条');
+  } else {
+    pass(mod, '彩蛋数量', items.length + ' 条');
+  }
+  var ids = {}, pool = [];
+  items.forEach(function (c) {
+    var missing = ['id', 'text', 'hint'].filter(function (f) { return !c[f]; });
+    if (missing.length) {
+      fail(mod, '彩蛋「' + (c.id || '?') + '」字段完整', '缺 ' + missing.join('/'), '每条彩蛋需要 id/text/hint');
+    } else {
+      pass(mod, '彩蛋「' + c.id + '」字段完整', 'id/text/hint 齐全');
+    }
+    if (ids[c.id]) fail(mod, '彩蛋 id 唯一', c.id, 'id 重复');
+    ids[c.id] = true;
+    pool.push({ module: '每日彩蛋', field: '彩蛋「' + c.id + '」', text: c.text });
+    pool.push({ module: '每日彩蛋', field: '彩蛋「' + c.id + '」·提示', text: c.hint });
+  });
+  var dup = scanDuplicates(pool, 0.75);
+  if (dup.exact.length) {
+    dup.exact.forEach(function (d) {
+      fail(mod, '彩蛋文案无精确重复', brief(d.b.text), '与「' + d.a.field + '」完全相同');
+    });
+  } else {
+    pass(mod, '彩蛋文案无精确重复', pool.length + ' 条文案零重复');
+  }
+  if (dup.near.length) {
+    dup.near.forEach(function (d) {
+      warn(mod, '彩蛋文案无近重复', brief(d.b.text, 18) + ' ≈ ' + brief(d.a.text, 18),
+        '相似度 ' + d.sim.toFixed(2));
+    });
+  } else {
+    pass(mod, '彩蛋文案无近重复', '全部低于 0.75 阈值');
+  }
+  try {
+    var engine = require(path.join(JS_DIR, 'engine.js'));
+    var c1 = engine.challengesOf('2026-11-17');
+    var c2 = engine.challengesOf('2026-11-17');
+    if (!c1 || c1.id !== c2.id) {
+      fail(mod, '同一天的彩蛋固定', '两次结果不同', '彩蛋应当按日期确定');
+    } else {
+      pass(mod, '同一天的彩蛋固定', c1.id);
+    }
+  } catch (e) {
+    fail(mod, '彩蛋可按日期取出', '抛异常', String(e && e.message));
+  }
+  mod.entries = items.length;
+  mod.detail = '彩蛋 ' + items.length + ' 条';
   return mod;
 }
 
@@ -1123,7 +1221,7 @@ function auditGames() {
   sandbox.self = sandbox;
   vm.createContext(sandbox);
 
-  var load = ['pixel.js', 'sprites.js', 'game-mole.js', 'game-dodge.js', 'game-match3.js', 'game-fish.js'];
+  var load = ['pixel.js', 'sprites.js', 'game-mole.js', 'game-dodge.js', 'game-match3.js', 'game-fish.js', 'game-recall.js'];
   var loaded = [];
   load.forEach(function (f) {
     try {
@@ -1555,6 +1653,7 @@ function main(argv) {
   auditTalk();
   auditFish();
   auditStory();
+  auditChallenges();
   auditReport();
   auditGames();
   auditGlobal();

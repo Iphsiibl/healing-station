@@ -191,8 +191,9 @@
   <!-- ============ 今日生存小游戏 ============ -->
   <section class="panel" id="panel-game" role="tabpanel" aria-labelledby="tab-game" tabindex="-1" hidden>
     <div class="card story-card" id="storyCard">
-      <h2 class="card-title">今天能准时下班吗？</h2>
-      <p class="card-hint">一部只有几个按钮的职场生存剧。没有正确答案，只有一条属于你的路。</p>
+      <h2 class="card-title" id="storyTitle">今天能准时下班吗？</h2>
+      <p class="card-hint" id="storySubtitle">两部只有几个按钮的职场生存剧：今天能不能准时下班，以及被裁的那天。没有正确答案，只有一条属于你的路。</p>
+      <div class="story-tabs" id="storyTabs" role="group" aria-label="选择一部剧"></div>
       <div class="story-head">
         <span class="story-emoji" id="storyEmoji">🌅</span>
         <div class="story-head-text">
@@ -230,6 +231,20 @@
       <h2 class="card-title">摸鱼游戏厅</h2>
       <p class="card-hint">点开就能玩的像素小游戏：一局一分钟，手残也能玩。所有画面由代码现场画出来，不加载任何图片和音频文件。</p>
       <p class="tip">v1.5 起画布翻倍到 320×288：墙、窗、挂钟、工位、地毯、木栈桥都是一颗一颗手绘的像素，细节比上一版多了一倍。</p>
+      <div class="challenge-card" id="challengeCard" hidden>
+        <div class="challenge-head">
+          <span class="challenge-emoji" aria-hidden="true">🎯</span>
+          <div class="challenge-head-text">
+            <h3 class="challenge-title">今日彩蛋</h3>
+            <p class="challenge-min">一天一件小事，三分钟以内能做完</p>
+          </div>
+        </div>
+        <p class="challenge-text" id="challengeText"></p>
+        <p class="challenge-hint" id="challengeHint"></p>
+        <div class="btn-row">
+          <button class="btn ghost" type="button" id="challengeDone" aria-pressed="false">我做完了</button>
+        </div>
+      </div>
       <div id="gameHall"></div>
       <p class="tip">想把最喜欢的那一款单独放进自己的网页？用 <b>&lt;iframe src="games/index.html?game=mole"&gt;</b> 就行。</p>
     </div>
@@ -274,7 +289,7 @@
     <span class="gh-dot">·</span>
     <a class="gh-link" href="https://iphsiibl.github.io/healing-station/" target="_blank" rel="noopener noreferrer">🌐 在线体验</a>
   </p>
-  <p class="version">v1.8.0 · 数据只存在你自己的浏览器里，不上传</p>
+  <p class="version">v1.9.0 · 数据只存在你自己的浏览器里，不上传</p>
 </footer>
 
 <div class="boss-screen" id="bossScreen" role="dialog" aria-modal="true" aria-label="正在开会" tabindex="-1" hidden>
@@ -297,6 +312,8 @@
 <script src="assets/js/data-moods.js"></script>
 <script src="assets/js/data-scenes.js"></script>
 <script src="assets/js/data-story.js"></script>
+<script src="assets/js/data-story2.js"></script>
+<script src="assets/js/data-challenges.js"></script>
 <script src="assets/js/data-breath.js"></script>
 <script src="assets/js/data-boss.js"></script>
 <script src="assets/js/engine.js"></script>
@@ -307,6 +324,7 @@
 <script src="games/game-dodge.js"></script>
 <script src="games/game-match3.js"></script>
 <script src="games/game-fish.js"></script>
+<script src="games/game-recall.js"></script>
 <script src="games/hall.js"></script>
 <script src="assets/js/app.js"></script>
 </body>

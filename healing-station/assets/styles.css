@@ -494,6 +494,18 @@ input[type="range"]:focus-visible { outline: 2px solid var(--coral); outline-off
 .pomo-mode { margin: .2rem 0 0; color: var(--ink-soft); font-size: .9rem; }
 
 /* ---------- 今日生存小游戏 ---------- */
+.story-tabs { display: flex; flex-wrap: wrap; gap: .55rem; margin: 0 0 1rem; }
+.story-tab {
+  font: inherit; cursor: pointer; display: flex; align-items: center; gap: .5rem;
+  padding: .5rem .8rem; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--paper); color: var(--ink-soft); box-shadow: var(--shadow-soft);
+  transition: transform var(--speed), border-color var(--speed), background var(--speed);
+}
+.story-tab:hover { transform: translateY(-1px); border-color: var(--lilac); }
+.story-tab.is-selected { border-color: var(--lilac); background: var(--lilac-soft); color: var(--ink); }
+.story-tab-emoji { font-size: 1.05rem; line-height: 1; }
+.story-tab-name { font-weight: 600; font-size: .95rem; }
+.story-tab-min { font-size: .78rem; color: var(--ink-soft); opacity: .8; }
 .story-head { display: flex; align-items: center; gap: .9rem; margin-bottom: .9rem; }
 .story-emoji { font-size: 2.4rem; line-height: 1; }
 .story-head-text { min-width: 0; }
@@ -524,6 +536,22 @@ input[type="range"]:focus-visible { outline: 2px solid var(--coral); outline-off
   background: var(--cream-2); border: 1px dashed var(--line); border-radius: var(--radius-sm);
   font: inherit; font-size: .92rem; line-height: 1.8; color: var(--ink-soft);
 }
+.story-tab-min { white-space: nowrap; }
+
+/* ---------- 每日彩蛋 ---------- */
+.challenge-card {
+  margin: 1rem 0 1.2rem; padding: 1rem 1.1rem;
+  background: var(--butter-soft); border: 1px solid var(--line);
+  border-left: 4px solid var(--butter); border-radius: var(--radius-sm);
+}
+.challenge-card[hidden] { display: none; }
+.challenge-head { display: flex; align-items: center; gap: .7rem; margin-bottom: .6rem; }
+.challenge-emoji { font-size: 1.6rem; line-height: 1; }
+.challenge-head-text { min-width: 0; }
+.challenge-title { margin: 0; font-size: 1.05rem; }
+.challenge-min { margin: .1rem 0 0; font-size: .82rem; color: var(--ink-soft); }
+.challenge-text { margin: 0 0 .35rem; font-size: 1.02rem; font-weight: 600; line-height: 1.7; }
+.challenge-hint { margin: 0; font-size: .9rem; color: var(--ink-soft); line-height: 1.7; }
 
 /* ---------- 老板键 ---------- */
 .boss-screen {
@@ -637,4 +665,7 @@ input[type="range"]:focus-visible { outline: 2px solid var(--coral); outline-off
   .breath-circle { width: 96px; height: 96px; flex: 0 0 96px; }
   .boss-picker, .breath-picker { gap: .4rem; }
   .boss-chip, .breath-btn { padding: .4rem .65rem; font-size: .82rem; }
+  .story-tab { padding: .42rem .7rem; gap: .4rem; }
+  .story-tab-min { display: none; }
+  .challenge-card { padding: .85rem .9rem; }
 }

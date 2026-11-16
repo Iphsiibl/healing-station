@@ -145,7 +145,7 @@
       p.hidden = !on;
     });
     if (target === 'panel-report') renderReport();
-    if (target === 'panel-games') mountGameHall();
+    if (target === 'panel-games') { mountGameHall(); renderChallenge(); }
   }
 
   function initTabs() {
@@ -673,8 +673,51 @@
   /* ---------- 模块四：今日生存小游戏 ---------- */
   var storyState = null;
 
+  // 当前剧目的元信息（标题 / 副标题 / 规模）
+  function storyMeta() {
+    var list = E.storyList ? E.storyList() : [];
+    var cur = E.storyCurrent ? E.storyCurrent() : null;
+    for (var i = 0; i < list.length; i++) if (cur && list[i].id === cur.id) return list[i];
+    return list[0] || null;
+  }
+
+  // 剧目切换条
+  function renderStoryTabs() {
+    var box = $('#storyTabs');
+    if (!box) return;
+    box.innerHTML = '';
+    var list = E.storyList ? E.storyList() : [];
+    var cur = storyMeta();
+    list.forEach(function (s) {
+      var b = el('button', 'story-tab');
+      b.type = 'button';
+      b.setAttribute('data-story', s.id);
+      b.setAttribute('aria-pressed', cur && s.id === cur.id ? 'true' : 'false');
+      if (cur && s.id === cur.id) b.classList.add('is-selected');
+      b.appendChild(el('span', 'story-tab-emoji', s.emoji || '🎬'));
+      b.appendChild(el('span', 'story-tab-name', s.title));
+      b.appendChild(el('span', 'story-tab-min', s.nodeCount + ' 幕 · ' + s.endingCount + ' 种结局'));
+      b.addEventListener('click', function () { storySwitch(s.id); });
+      box.appendChild(b);
+    });
+    var title = $('#storyTitle');
+    if (title && cur) title.textContent = cur.title;
+    var sub = $('#storySubtitle');
+    if (sub && cur) sub.textContent = cur.subtitle;
+  }
+
+  function storySwitch(id) {
+    if (!E.storySelect || !E.storySelect(id)) return;
+    storyState = E.storyStart();
+    renderStoryTabs();
+    renderStory();
+    var meta = storyMeta();
+    toast('换成了《' + (meta ? meta.title : id) + '》 🎬');
+  }
+
   function storyInit() {
     if (!storyState) storyState = E.storyStart();
+    renderStoryTabs();
     renderStory();
   }
 
@@ -683,7 +726,8 @@
     if (!box) return;
     var full = '❤'.repeat(Math.max(0, storyState.heart));
     var empty = '🤍'.repeat(Math.max(0, storyState.maxHeart - storyState.heart));
-    box.textContent = full + empty + '　' + storyState.heart + '/' + storyState.maxHeart;
+    var label = (storyState.heartsLabel || '').trim();
+    box.textContent = full + empty + '　' + storyState.heart + '/' + storyState.maxHeart + (label ? ' ' + label : '');
   }
 
   function renderStory() {
@@ -756,6 +800,45 @@
     box.hidden = false;
   }
 
+  /* ---------- 模块六：每日彩蛋（v1.9.0） ---------- */
+
+  function challengeToday() {
+    return E.challengesOf ? E.challengesOf(today()) : null;
+  }
+
+  function renderChallenge() {
+    var box = $('#challengeCard');
+    if (!box) return;
+    var c = challengeToday();
+    if (!c) { box.hidden = true; return; }
+    var text = $('#challengeText');
+    if (text) text.textContent = c.text;
+    var hint = $('#challengeHint');
+    if (hint) hint.textContent = c.hint || '';
+    var doneMap = loadStore().challengesDone || {};
+    var done = doneMap[today()] === c.id;
+    var btn = $('#challengeDone');
+    if (btn) {
+      btn.textContent = done ? '今天已经收下了 ✓' : '我做完了';
+      btn.disabled = !!done;
+      btn.setAttribute('aria-pressed', done ? 'true' : 'false');
+    }
+    box.hidden = false;
+  }
+
+  function challengeComplete() {
+    var c = challengeToday();
+    if (!c) return;
+    var doneMap = loadStore().challengesDone || {};
+    if (doneMap[today()] === c.id) return;
+    doneMap[today()] = c.id;
+    saveStore({ challengesDone: doneMap });
+    bumpEnergy(1);
+    recordAction('c');
+    renderChallenge();
+    toast('今天的彩蛋收下了 ✨');
+  }
+
   /* ---------- 模块五：疗愈周报 ---------- */
 
   // 记录一次使用（按天归档，只存在本地）
@@ -764,7 +847,7 @@
       var data = loadStore();
       var days = data.days || {};
       var key = today();
-      var rec = days[key] || { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, b: 0, moods: {}, ends: {} };
+      var rec = days[key] || { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, b: 0, c: 0, moods: {}, ends: {} };
       rec[kind] = (rec[kind] || 0) + 1;
       if (extra && extra.mood) {
         rec.moods = rec.moods || {};
@@ -787,10 +870,13 @@
 
   function endingNameMap() {
     var map = {};
-    var ends = (E.story && E.story.endings) || {};
-    for (var id in ends) {
-      if (Object.prototype.hasOwnProperty.call(ends, id)) map[id] = ends[id].emoji + ' ' + ends[id].title;
-    }
+    var list = E.stories || (E.story ? [E.story] : []);
+    list.forEach(function (st) {
+      var ends = (st && st.endings) || {};
+      for (var id in ends) {
+        if (Object.prototype.hasOwnProperty.call(ends, id)) map[id] = ends[id].emoji + ' ' + ends[id].title;
+      }
+    });
     return map;
   }
 
@@ -820,7 +906,8 @@
       { n: rep.totals.p, label: '专注', emoji: '⏳' },
       { n: rep.totals.s, label: '通关', emoji: '🎲' },
       { n: rep.totals.g, label: '游戏', emoji: '🎮' },
-      { n: rep.totals.b, label: '呼吸', emoji: '🫧' }
+      { n: rep.totals.b, label: '呼吸', emoji: '🫧' },
+      { n: rep.totals.c, label: '彩蛋', emoji: '🎯' }
     ];
     cards.forEach(function (c) {
       var box = el('div', 'report-stat');
@@ -1024,13 +1111,16 @@
 
     // 摸鱼游戏厅
     mountGameHall();
+    renderChallenge();
+    var cDone = $('#challengeDone');
+    if (cDone) cDone.addEventListener('click', challengeComplete);
     if (window.HS_HALL) {
       window.HS_HALL.onFinish = function (id, score) {
         try {
           var data = loadStore();
           var days = data.days || {};
           var key = today();
-          var rec = days[key] || { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, b: 0, moods: {}, ends: {} };
+          var rec = days[key] || { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, b: 0, c: 0, moods: {}, ends: {} };
           rec.g = (rec.g || 0) + 1;
           rec.games = rec.games || {};
           rec.games[id] = (rec.games[id] || 0) + 1;

@@ -222,8 +222,8 @@ const endings = story.endings;
 const nodeIds = Object.keys(nodes);
 const endIds = Object.keys(endings);
 
-ok(nodeIds.length >= 20, '故事节点 >= 20', '实际 ' + nodeIds.length);
-ok(endIds.length >= 5, '结局数量 >= 5', '实际 ' + endIds.length);
+ok(nodeIds.length >= 60, '故事节点 >= 60', '实际 ' + nodeIds.length);
+ok(endIds.length >= 10, '结局数量 >= 10', '实际 ' + endIds.length);
 ok(!!nodes[story.start], '起始节点存在：' + story.start);
 
 nodeIds.forEach(id => {
@@ -389,6 +389,98 @@ const repB = engine.weeklyReport(daysB, todayStr, 7);
 ok(repB.totals.b === 2, '周报统计呼吸次数', String(repB.totals.b));
 ok(repB.total === 8, '周报总量含呼吸次数', String(repB.total));
 ok(engine.reportSummary(repB, {}, {}).includes('呼吸 2 次'), '周报小结提到呼吸');
+
+/* ---------- 8. 剧目与每日彩蛋（v1.9.0） ---------- */
+section('8. 剧目与每日彩蛋（v1.9.0）');
+
+// 8.1 第二短篇《被裁的那天》
+const story2 = require(path.join(JS, 'data-story2.js'));
+const s2nodes = story2.nodes || {};
+const s2ends = story2.endings || {};
+const s2nodeIds = Object.keys(s2nodes);
+const s2endIds = Object.keys(s2ends);
+ok(s2nodeIds.length >= 20, '第二短篇节点 >= 20', '实际 ' + s2nodeIds.length);
+ok(s2endIds.length >= 4, '第二短篇结局 >= 4', '实际 ' + s2endIds.length);
+ok(!!story2.id && !!story2.title && !!story2.subtitle && !!story2.heartsLabel, '第二短篇顶层字段完整');
+ok(!!s2nodes[story2.start], '第二短篇起始节点存在：' + story2.start);
+s2nodeIds.forEach(id => {
+  const n = s2nodes[id];
+  ok(!!n.emoji && !!n.title && !!n.text, '第二短篇节点「' + id + '」含 emoji/title/text');
+  ok(Array.isArray(n.choices) && n.choices.length >= 2, '第二短篇节点「' + id + '」至少 2 个选择');
+  n.choices.forEach((c, i) => {
+    ok(!!c.label && !!c.tip, '第二短篇节点「' + id + '」选择 ' + i + ' 字段完整');
+    ok(!!s2nodes[c.next] || !!s2ends[c.next], '第二短篇节点「' + id + '」选择 ' + i + ' 指向有效目标：' + c.next);
+  });
+});
+s2endIds.forEach(id => {
+  const e = s2ends[id];
+  ok(!!e.emoji && !!e.title && !!e.grade && !!e.desc && !!e.comfort && !!e.tip, '第二短篇结局「' + id + '」字段完整');
+});
+const reach2 = engine.storyReach('layoff');
+s2nodeIds.forEach(id => ok(!!reach2.nodes[id], '第二短篇节点可达：' + id));
+s2endIds.forEach(id => ok(!!reach2.endings[id], '第二短篇结局可达：' + id));
+
+// 第二短篇不得出现法律条文、赔偿数字或给法律建议
+const s2Text = JSON.stringify(story2);
+const legalWords = ['劳动法', '仲裁', '赔偿金', 'N+1', '2N', '经济补偿金', '依据第'];
+legalWords.forEach(w => ok(s2Text.indexOf(w) === -1, '第二短篇不含法律/金额表述：' + w));
+ok(!/\d+\s*元/.test(s2Text), '第二短篇不含具体金额');
+
+// 8.2 多剧目引擎
+const storyList = engine.storyList();
+ok(storyList.length >= 2, '剧目列表 >= 2 部', '实际 ' + storyList.length);
+storyList.forEach(s => {
+  ok(!!s.id && !!s.title && !!s.subtitle, '剧目「' + s.id + '」元信息完整');
+  ok(s.nodeCount >= 20, '剧目「' + s.id + '」节点数达标：' + s.nodeCount);
+  ok(s.endingCount >= 4, '剧目「' + s.id + '」结局数达标：' + s.endingCount);
+});
+ok(engine.storySelect('layoff') === true, 'storySelect 可切换到第二部');
+ok(engine.storyCurrent().id === 'layoff', '当前剧目已切换');
+const st2 = engine.storyStart();
+ok(st2.nodeId === story2.start, '切换后 storyStart 从新剧目起点开始');
+ok(!!st2.heartsLabel, 'storyStart 带出 heartsLabel');
+engine.storySelect('today');
+ok(engine.storyCurrent().id === 'today', '可以切回第一部');
+ok(engine.storySelect('not-exist') === false, '切换不存在的剧目会失败');
+
+// 8.3 每日彩蛋
+const chalData = require(path.join(JS, 'data-challenges.js'));
+const chalList = chalData.items || [];
+ok(chalList.length >= 12, '每日彩蛋 >= 12 条', '实际 ' + chalList.length);
+const chalIds = new Set();
+chalList.forEach(c => {
+  ok(!!c.id && !!c.text && !!c.hint, '彩蛋「' + c.id + '」字段完整');
+  ok(!chalIds.has(c.id), '彩蛋 id 不重复：' + c.id);
+  chalIds.add(c.id);
+  ok(c.text.length <= 40 && c.hint.length <= 40, '彩蛋「' + c.id + '」文案长度合规');
+});
+ok(engine.challengeList().length === chalList.length, 'engine.challengeList 可读取');
+const c1 = engine.challengesOf('2026-11-17');
+const c2 = engine.challengesOf('2026-11-17');
+ok(!!c1 && c1.id === c2.id, '同一天的彩蛋是同一条');
+const dayIds = new Set();
+['2026-11-17', '2026-11-18', '2026-11-19', '2026-11-20', '2026-11-21', '2026-11-22'].forEach(d => {
+  const c = engine.challengesOf(d);
+  ok(!!c && !!c.id, '日期 ' + d + ' 能取到彩蛋');
+  dayIds.add(c && c.id);
+});
+ok(dayIds.size >= 3, '不同日期会轮换出不同彩蛋', '实际 ' + dayIds.size + ' 种');
+
+// 8.4 周报新增彩蛋统计
+const daysC = {};
+daysC['2026-11-15'] = { d: 1, r: 1, f: 1, p: 1, s: 1, g: 1, b: 1, c: 2 };
+const repC = engine.weeklyReport(daysC, todayStr, 7);
+ok(repC.totals.c === 2, '周报统计彩蛋数', String(repC.totals.c));
+ok(repC.total === 9, '周报总量含彩蛋数', String(repC.total));
+ok(engine.reportSummary(repC, {}, {}).includes('彩蛋 2 个'), '周报小结提到彩蛋');
+
+// 8.5 页面与脚本接线
+ok(html.indexOf('assets/js/data-story2.js') !== -1, '引入 data-story2.js');
+ok(html.indexOf('assets/js/data-challenges.js') !== -1, '引入 data-challenges.js');
+ok(html.indexOf('id="storyTabs"') !== -1, '页面存在剧目切换区');
+ok(html.indexOf('id="challengeCard"') !== -1 && html.indexOf('id="challengeDone"') !== -1, '页面存在今日彩蛋卡');
+ok(appJs.indexOf('challengesDone') !== -1, '彩蛋完成状态存在本地存储');
+ok(appJs.indexOf('recordAction(\'c\')') !== -1, '彩蛋完成计入周报');
 
 /* ---------- 结果 ---------- */
 console.log('\n----------------------------------------');

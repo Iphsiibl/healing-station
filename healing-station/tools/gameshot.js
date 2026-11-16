@@ -193,7 +193,12 @@ function bootGame(id, opts) {
   sandbox.globalThis = sandbox;
   var ctxObj = vm.createContext(sandbox);
 
-  var files = ['pixel.js', 'sprites.js', 'game-mole.js', 'game-dodge.js', 'game-match3.js', 'game-fish.js'];
+  /* v1.9.0：自动加载 games/ 目录下所有 game-*.js，新增游戏不用改这里 */
+  var files = ['pixel.js', 'sprites.js'].concat(
+    fs.readdirSync(GAMES_DIR)
+      .filter(function (f) { return /^game-.*\.js$/.test(f); })
+      .sort()
+  );
   for (var i = 0; i < files.length; i++) {
     var code = fs.readFileSync(path.join(GAMES_DIR, files[i]), 'utf8');
     vm.runInContext(code, ctxObj, { filename: files[i] });
@@ -254,9 +259,16 @@ function shoot(id, frames, outFile, scale, onFrame) {
   return { file: outFile, bytes: png.length, W: g.W, H: g.H };
 }
 
+/* 已注册的全部游戏 id（用于「不给参数就全出图」） */
+function listGameIds() {
+  var g = bootGame('mole', {});
+  var list = (g.sandbox.HS_GAMES && g.sandbox.HS_GAMES.list) ? g.sandbox.HS_GAMES.list() : [];
+  return list.map(function (d) { return d.id; });
+}
+
 function main() {
   var args = process.argv.slice(2);
-  var ids = args.length && args[0] !== 'all' ? [args[0]] : ['mole', 'dodge', 'match3', 'fish'];
+  var ids = args.length && args[0] !== 'all' ? [args[0]] : listGameIds();
   var frames = args.length > 1 ? parseInt(args[1], 10) : 90;
   var outDir = path.join(ROOT, '.shots');
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir);

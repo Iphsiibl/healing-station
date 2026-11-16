@@ -191,7 +191,7 @@ ok(Object.keys(missing).length === 0, '所有点阵字符都有颜色', Object.k
  * ============================================================ */
 section('2. 游戏注册与运行');
 
-var GAME_FILES = ['game-mole.js', 'game-dodge.js', 'game-match3.js', 'game-fish.js'];
+var GAME_FILES = ['game-mole.js', 'game-dodge.js', 'game-match3.js', 'game-fish.js', 'game-recall.js'];
 var win2 = sandbox();
 load(win2, 'pixel.js');
 load(win2, 'sprites.js');

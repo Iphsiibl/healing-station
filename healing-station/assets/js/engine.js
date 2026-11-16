@@ -8,6 +8,7 @@
   var PACKS = (root.HS_MOODS || (typeof require !== 'undefined' ? require('./data-moods.js') : {})).keywordPacks || {};
   var SCENE_DATA = (root.HS_SCENES || (typeof require !== 'undefined' ? require('./data-scenes.js') : {})).scenes || [];
   var TONES = (root.HS_SCENES || (typeof require !== 'undefined' ? require('./data-scenes.js') : {})).tones || {};
+  var CHALLENGES = (root.HS_CHALLENGES || (typeof require !== 'undefined' ? require('./data-challenges.js') : {})).items || [];
 
   /* ---------- 通用工具 ---------- */
 
@@ -253,14 +254,76 @@
 
   /* ---------- 模块三：今日生存小游戏 ---------- */
 
-  var STORY = (root.HS_STORY || (typeof require !== 'undefined' ? require('./data-story.js') : {}));
+  /* v1.9.0 起支持多个剧目（主篇 + 第二短篇）。
+   * 剧目列表按注册顺序排列，第一个是默认剧目。 */
+  var STORIES = [];
+  (function () {
+    var list = [];
+    if (root.HS_STORY) list.push(root.HS_STORY);
+    if (root.HS_STORY2) list.push(root.HS_STORY2);
+    if (root.HS_STORIES && root.HS_STORIES.length) list = list.concat(root.HS_STORIES);
+    if (!list.length && typeof require !== 'undefined') {
+      try { list.push(require('./data-story.js')); } catch (e) { }
+      try { list.push(require('./data-story2.js')); } catch (e) { }
+    }
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i];
+      if (!s || !s.nodes) continue;
+      if (!s.id) s.id = i === 0 ? 'today' : ('story' + (i + 1));
+      STORIES.push(s);
+    }
+  })();
+
+  var currentStoryId = STORIES.length ? STORIES[0].id : '';
+
+  // 当前剧目
+  function storyCurrent() {
+    for (var i = 0; i < STORIES.length; i++) {
+      if (STORIES[i].id === currentStoryId) return STORIES[i];
+    }
+    return STORIES[0] || {};
+  }
+
+  // 剧目清单（给界面用）
+  function storyList() {
+    var out = [];
+    for (var i = 0; i < STORIES.length; i++) {
+      var s = STORIES[i];
+      out.push({
+        id: s.id,
+        title: s.title || s.id,
+        subtitle: s.subtitle || '',
+        emoji: s.emoji || '',
+        hearts: s.hearts || 5,
+        heartsLabel: s.heartsLabel || '心值',
+        nodeCount: Object.keys(s.nodes || {}).length,
+        endingCount: Object.keys(s.endings || {}).length
+      });
+    }
+    return out;
+  }
+
+  // 切换剧目（返回是否成功）
+  function storySelect(id) {
+    for (var i = 0; i < STORIES.length; i++) {
+      if (STORIES[i].id === id) {
+        currentStoryId = id;
+        return true;
+      }
+    }
+    return false;
+  }
 
   // 开一局：返回全新的游戏状态
   function storyStart() {
+    var STORY = storyCurrent();
     return {
       nodeId: STORY.start,
       heart: STORY.hearts || 5,
       maxHeart: STORY.hearts || 5,
+      heartsLabel: STORY.heartsLabel || '心值',
+      storyId: STORY.id,
+      title: STORY.title || '',
       maxSteps: STORY.maxSteps || 40,
       path: [],
       finished: false,
@@ -271,17 +334,18 @@
   // 取当前节点（结束态返回 null）
   function storyNode(state) {
     if (!state || state.finished) return null;
-    return STORY.nodes[state.nodeId] || null;
+    return storyCurrent().nodes[state.nodeId] || null;
   }
 
   // 走到结局了吗
   function storyIsEnd(state) {
-    return !!(state && state.endingId && STORY.endings[state.endingId]);
+    if (!state || !state.endingId) return false;
+    return !!storyCurrent().endings[state.endingId];
   }
 
   function storyEnding(state) {
     if (!storyIsEnd(state)) return null;
-    return STORY.endings[state.endingId];
+    return storyCurrent().endings[state.endingId];
   }
 
   /**
@@ -306,6 +370,7 @@
     state.heart = Math.max(0, Math.min(state.maxHeart, state.heart + (choice.heart || 0)));
     state.nodeId = choice.next;
 
+    var STORY = storyCurrent();
     if (STORY.endings[state.nodeId]) {
       state.finished = true;
       state.endingId = state.nodeId;
@@ -336,7 +401,14 @@
   }
 
   // 统计：从起点出发，哪些节点和结局真的走得到（用于自检）
-  function storyReach() {
+  // v1.9.0：可以传剧目 id，不传则查当前剧目
+  function storyReach(storyId) {
+    var STORY = storyCurrent();
+    if (storyId) {
+      for (var si = 0; si < STORIES.length; si++) {
+        if (STORIES[si].id === storyId) { STORY = STORIES[si]; break; }
+      }
+    }
     var seen = {}, ends = {}, stack = [STORY.start];
     while (stack.length) {
       var id = stack.pop();
@@ -383,7 +455,7 @@
     var base = new Date(String(todayStr || '') + 'T00:00:00');
     if (isNaN(base.getTime())) base = new Date();
 
-    var list = [], totals = { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, b: 0 }, moods = {}, ends = {}, max = 0;
+    var list = [], totals = { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, b: 0, c: 0 }, moods = {}, ends = {}, max = 0;
     for (var i = span - 1; i >= 0; i--) {
       var dt = new Date(base.getTime() - i * 86400000);
       var key = dayKey(dt);
@@ -399,16 +471,17 @@
         s: rec ? (rec.s || 0) : 0,
         g: rec ? (rec.g || 0) : 0,
         b: rec ? (rec.b || 0) : 0,
+        c: rec ? (rec.c || 0) : 0,
         total: 0
       };
-      row.total = row.d + row.r + row.f + row.p + row.s + row.g + row.b;
+      row.total = row.d + row.r + row.f + row.p + row.s + row.g + row.b + row.c;
       if (rec && rec.moods) {
         for (var mk in rec.moods) if (Object.prototype.hasOwnProperty.call(rec.moods, mk)) moods[mk] = (moods[mk] || 0) + rec.moods[mk];
       }
       if (rec && rec.ends) {
         for (var ek in rec.ends) if (Object.prototype.hasOwnProperty.call(rec.ends, ek)) ends[ek] = (ends[ek] || 0) + rec.ends[ek];
       }
-      totals.d += row.d; totals.r += row.r; totals.f += row.f; totals.p += row.p; totals.s += row.s; totals.g += row.g; totals.b += row.b;
+      totals.d += row.d; totals.r += row.r; totals.f += row.f; totals.p += row.p; totals.s += row.s; totals.g += row.g; totals.b += row.b; totals.c += row.c;
       if (row.total > max) max = row.total;
       list.push(row);
     }
@@ -418,7 +491,7 @@
       max: max,
       moods: moods,
       ends: ends,
-      total: totals.d + totals.r + totals.f + totals.p + totals.s + totals.g + totals.b,
+      total: totals.d + totals.r + totals.f + totals.p + totals.s + totals.g + totals.b + totals.c,
       topMood: topKey(moods),
       topEnding: topKey(ends)
     };
@@ -437,6 +510,7 @@
     if (rep.totals.s) bits.push('通关 ' + rep.totals.s + ' 次');
     if (rep.totals.g) bits.push('游戏 ' + rep.totals.g + ' 局');
     if (rep.totals.b) bits.push('呼吸 ' + rep.totals.b + ' 次');
+    if (rep.totals.c) bits.push('彩蛋 ' + rep.totals.c + ' 个');
 
     var text = '这周你在急救站被哄了 ' + rep.total + ' 次' + (bits.length ? '（' + bits.join('、') + '）' : '') + '。';
     if (rep.topMood && moodNames && moodNames[rep.topMood]) {
@@ -506,6 +580,21 @@
     return list[0] || null;
   }
 
+  /* ---------- 模块六：每日彩蛋（v1.9.0） ---------- */
+
+  // 全部彩蛋
+  function challengeList() {
+    return CHALLENGES || [];
+  }
+
+  // 按日期挑今天的彩蛋（同一天永远是同一条，跨天自然轮换）
+  function challengesOf(dateStr) {
+    var list = challengeList();
+    if (!list.length) return null;
+    var key = String(dateStr || '');
+    return list[hash('challenge:' + key) % list.length];
+  }
+
   /* ---------- 导出 ---------- */
 
   var ENGINE = {
@@ -529,6 +618,11 @@
     storyIsEnd: storyIsEnd,
     storyRecap: storyRecap,
     storyReach: storyReach,
+    storyList: storyList,
+    storySelect: storySelect,
+    storyCurrent: storyCurrent,
+    challengeList: challengeList,
+    challengesOf: challengesOf,
     weeklyReport: weeklyReport,
     reportSummary: reportSummary,
     reportText: reportText,
@@ -536,7 +630,8 @@
     get scenes() { return SCENE_DATA; },
     get tones() { return TONES; },
     get keywordPacks() { return PACKS; },
-    get story() { return STORY; }
+    get stories() { return STORIES; },
+    get story() { return storyCurrent(); }
   };
 
   root.HS_ENGINE = ENGINE;
