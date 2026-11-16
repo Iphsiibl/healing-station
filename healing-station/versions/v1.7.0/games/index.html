@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>摸鱼游戏厅 · 打工人急救站</title>
+<meta name="description" content="打工人急救站 · 摸鱼游戏厅：像素风网页小游戏，点击即玩，可嵌入任意网页。">
+<link rel="stylesheet" href="games.css">
+</head>
+<body class="sg-body">
+
+<header class="sg-head">
+  <h1>🎮 摸鱼游戏厅</h1>
+  <p>打工人急救站的小游戏分店 · 一局一分钟 · 像素风 · 数据只留本地</p>
+  <nav class="sg-tabs" id="sgTabs" aria-label="小游戏选择"></nav>
+</header>
+
+<main class="sg-main" id="sgRoot"></main>
+
+<footer class="sg-foot">
+  由《打工人急救站》提供 ·
+  <a href="../index.html">回到急救站</a> ·
+  想嵌到自己网页里？用
+  <code>&lt;iframe src="…/games/index.html?game=mole"&gt;</code>
+</footer>
+
+<script src="pixel.js"></script>
+<script src="sprites.js"></script>
+<script src="game-mole.js"></script>
+<script src="game-dodge.js"></script>
+<script src="game-match3.js"></script>
+<script src="game-fish.js"></script>
+<script src="hall.js"></script>
+<script>
+/* 独立嵌入页：?game=mole 直接开那一款，没有参数就显示大厅 */
+(function () {
+  'use strict';
+  function pickGame() {
+    var m = /[?&]game=([a-z0-9_-]+)/i.exec(window.location.search || '');
+    return m ? m[1] : '';
+  }
+  function renderTabs(active) {
+    var nav = document.getElementById('sgTabs');
+    if (!nav) return;
+    nav.innerHTML = '';
+    var games = window.HS_GAMES.list();
+    for (var i = 0; i < games.length; i++) {
+      (function (def) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'sg-tab' + (def.id === active ? ' is-active' : '');
+        b.textContent = (def.emoji || '🎮') + ' ' + (def.title || def.id);
+        b.addEventListener('click', function () {
+          window.location.search = '?game=' + def.id;
+        });
+        nav.appendChild(b);
+      })(games[i]);
+    }
+  }
+  var root = document.getElementById('sgRoot');
+  var id = pickGame();
+  var valid = id && window.HS_GAMES.get(id) ? id : '';
+  renderTabs(valid);
+  if (root && window.HS_HALL) {
+    window.HS_HALL.mount(root, valid ? { game: valid } : {});
+  }
+})();
+</script>
+</body>
+</html>

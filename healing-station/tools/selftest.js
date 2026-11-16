@@ -45,8 +45,9 @@ section('1. 数据完整性');
 
 ok(moods.length >= 12, '心情数量 >= 12', '实际 ' + moods.length);
 ok(Object.keys(packs).length >= 18, '关键词包数量 >= 18', '实际 ' + Object.keys(packs).length);
-ok(scenes.length >= 12, '场景数量 >= 12', '实际 ' + scenes.length);
-ok(Object.keys(tones).length === 3, '语气档位为 3 档', Object.keys(tones).join(','));
+ok(scenes.length >= 26, '场景数量 >= 26', '实际 ' + scenes.length);
+ok(Object.keys(tones).length === 4, '语气档位为 4 档', Object.keys(tones).join(','));
+ok(!!tones.direct, '新增第 4 档语气 direct（直球·有底气）');
 
 const MOOD_FIELDS = ['id', 'name', 'emoji', 'desc', 'diagnoses', 'causes', 'remedies', 'blessings', 'checkup'];
 const moodIds = new Set();
@@ -79,16 +80,33 @@ Object.keys(packs).forEach(k => {
 });
 
 const sceneIds = new Set();
+const toneKeys = Object.keys(tones);
+// v1.7.0 新增的 10 个场景：话术控制在 60 字以内；老场景保留原文，仅做长度兜底
+const NEW_SCENE_IDS = ['layoff_notice', 'exit_handover', 'sick_leave', 'perf_review', 'bonus_ask',
+  'transfer_talk', 'client_push', 'scope_push', 'credit_steal', 'weekend_call'];
+const allReplies = [];
 scenes.forEach(s => {
   ok(!sceneIds.has(s.id), '场景 id 唯一：' + s.id);
   sceneIds.add(s.id);
   ok(s.name && s.emoji && s.desc && s.tip, '场景「' + s.name + '」基础字段完整');
-  ['safe', 'pro', 'wild'].forEach(t => {
+  ok(typeof s.when === 'string' && s.when.trim().length > 2, '场景「' + s.name + '」有使用提醒 when');
+  ok(typeof s.avoid === 'string' && s.avoid.trim().length > 2, '场景「' + s.name + '」有使用提醒 avoid');
+  const isNew = NEW_SCENE_IDS.indexOf(s.id) !== -1;
+  toneKeys.forEach(t => {
     const list = (s.replies || {})[t];
     ok(Array.isArray(list) && list.length === 3, '场景「' + s.name + '」[' + t + '] 恰好 3 条', list ? '实际 ' + list.length : '缺失');
-    (list || []).forEach((x, i) => ok(typeof x === 'string' && x.trim().length > 4, '场景「' + s.name + '」[' + t + ']第' + (i + 1) + '条话术有效'));
+    (list || []).forEach((x, i) => {
+      ok(typeof x === 'string' && x.trim().length > 4, '场景「' + s.name + '」[' + t + ']第' + (i + 1) + '条话术有效');
+      ok(x.length <= (isNew ? 60 : 200), '场景「' + s.name + '」[' + t + ']第' + (i + 1) + '条长度合规',
+        '实际 ' + x.length + (isNew ? '（新场景限 60 字）' : ''));
+      allReplies.push(x);
+    });
   });
 });
+ok(NEW_SCENE_IDS.every(id => sceneIds.has(id)), 'v1.7.0 新增的 10 个场景齐备');
+ok(allReplies.length === scenes.length * toneKeys.length * 3, '话术总数 = 场景 × 语气 × 3', '实际 ' + allReplies.length);
+ok(new Set(allReplies).size === allReplies.length, '全部话术无字面重复');
+ok(allReplies.every(x => x.indexOf('\uFFFD') === -1 && x.indexOf('**') === -1 && x.indexOf('##') === -1), '话术无乱码与 Markdown 标记');
 
 /* ---------- 2. 引擎逻辑 ---------- */
 section('2. 引擎逻辑');
@@ -119,10 +137,12 @@ ok(rKw2.matchedKeywords.length <= 2, '一次最多命中 2 个关键词包');
 ok(engine.diagnose('not-exist', '', 'z') === null, '未知心情返回 null');
 
 scenes.forEach(s => {
-  ['safe', 'pro', 'wild'].forEach(t => {
+  toneKeys.forEach(t => {
     const r = engine.reply(s.id, t, s.id + '|' + t + '|0');
     ok(!!r && typeof r.text === 'string' && r.text.length > 4, '话术可生成：' + s.id + '/' + t);
     ok(r && r.tone === t, '语气正确：' + s.id + '/' + t);
+    ok(r && typeof r.when === 'string' && r.when.length > 2, '话术带使用提醒 when：' + s.id + '/' + t);
+    ok(r && typeof r.avoid === 'string' && r.avoid.length > 2, '话术带使用提醒 avoid：' + s.id + '/' + t);
     const r2 = engine.reply(s.id, t, s.id + '|' + t + '|1');
     ok(r2 && r2.text !== r.text, '重掷能换出不同话术：' + s.id + '/' + t);
   });
@@ -163,7 +183,7 @@ textFiles.push(path.join(ROOT, 'index.html'));
 textFiles.push(path.join(ROOT, 'assets', 'styles.css'));
 textFiles.forEach(f => {
   const txt = fs.readFileSync(f, 'utf8');
-  const bad = txt.match(/�/g);
+  const bad = txt.match(/\uFFFD/g);
   ok(!bad, '无乱码替换字符：' + path.basename(f), bad ? bad.length + ' 处' : '');
 });
 

@@ -278,6 +278,18 @@
     $('#replyText').textContent = r.text;
     $('#talkTip').textContent = '💡 ' + r.tip;
 
+    // ⚠️ 使用提醒：什么时候这句话管用 / 什么时候别这么说
+    var usage = $('#talkUsage');
+    if (r.when || r.avoid) {
+      $('#talkWhen').textContent = r.when ? '👍 适合：' + r.when : '';
+      $('#talkAvoid').textContent = r.avoid ? '👎 别在：' + r.avoid : '';
+      $('#talkWhen').hidden = !r.when;
+      $('#talkAvoid').hidden = !r.avoid;
+      usage.hidden = false;
+    } else {
+      usage.hidden = true;
+    }
+
     $$('.tone-btn').forEach(function (b) {
       var on = b.dataset.tone === state.tone;
       b.classList.toggle('is-active', on);

@@ -95,7 +95,7 @@
   <section class="panel" id="panel-talk" role="tabpanel" aria-labelledby="tab-talk" tabindex="-1" hidden>
     <div class="card">
       <h2 class="card-title">遇到什么场面了？</h2>
-      <p class="card-hint">挑一个最像你今天的，点一下。话术分三档：<b>怂</b>（安全牌）、<b>稳</b>（专业但有边界）、<b>浪</b>（幽默，胆子大）。</p>
+      <p class="card-hint">挑一个最像你今天的，点一下。话术分四档：<b>怂</b>（安全牌）、<b>稳</b>（专业但有边界）、<b>浪</b>（幽默，胆子大）、<b>直球</b>（有底气地拒绝、把好处争取到手）。</p>
       <div class="scene-grid" id="sceneGrid" role="group" aria-label="选择职场场景"></div>
     </div>
 
@@ -106,6 +106,7 @@
         <button class="tone-btn is-active" role="tab" data-tone="safe" aria-selected="true" type="button">🙈 怂 · 安全牌</button>
         <button class="tone-btn" role="tab" data-tone="pro" aria-selected="false" type="button">🧊 稳 · 有边界</button>
         <button class="tone-btn" role="tab" data-tone="wild" aria-selected="false" type="button">🎪 浪 · 胆子大</button>
+        <button class="tone-btn" role="tab" data-tone="direct" aria-selected="false" type="button">🔥 直球 · 有底气</button>
       </div>
       <div class="reply-card" id="replyCard">
         <p class="reply-text" id="replyText"></p>
@@ -115,6 +116,11 @@
         </div>
       </div>
       <p class="tip" id="talkTip"></p>
+      <div class="usage-note" id="talkUsage" hidden>
+        <h4 class="result-sub">⚠️ 使用提醒</h4>
+        <p class="usage-line usage-when" id="talkWhen"></p>
+        <p class="usage-line usage-avoid" id="talkAvoid"></p>
+      </div>
     </div>
   </section>
 
@@ -245,7 +251,7 @@
     <span class="gh-dot">·</span>
     <a class="gh-link" href="https://iphsiibl.github.io/healing-station/" target="_blank" rel="noopener noreferrer">🌐 在线体验</a>
   </p>
-  <p class="version">v1.6.0 · 数据只存在你自己的浏览器里，不上传</p>
+  <p class="version">v1.7.0 · 数据只存在你自己的浏览器里，不上传</p>
 </footer>
 
 <div class="boss-screen" id="bossScreen" role="dialog" aria-modal="true" aria-label="正在开会" tabindex="-1" hidden>

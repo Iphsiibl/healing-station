@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>打工人急救站 · 一个只负责哄你的小站</title>
+<meta name="description" content="打工人急救站：情绪急诊室、社恐话术机、摸鱼补给站、今日生存小游戏、摸鱼游戏厅。把上班的苦，兑换成一点甜。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🚑%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/styles.css">
+<link rel="stylesheet" href="games/games.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<div class="bg-deco" aria-hidden="true">
+  <span class="blob blob-1">☕</span>
+  <span class="blob blob-2">🌙</span>
+  <span class="blob blob-3">🫧</span>
+  <span class="blob blob-4">🌿</span>
+  <span class="blob blob-5">🍮</span>
+</div>
+
+<header class="site-header">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">🚑</span>
+    <div class="brand-text">
+      <h1>打工人急救站</h1>
+      <p class="brand-sub">不解决你的问题，只负责哄你开心</p>
+    </div>
+  </div>
+  <div class="header-tools">
+    <button class="chip chip-btn" id="energyChip" type="button" title="点击查看本周疗愈周报">疗愈指数 0</button>
+    <button class="chip-btn" id="themeToggle" type="button" aria-pressed="false">🌗 夜晚模式</button>
+    <a class="chip-btn gh-chip" href="https://github.com/Iphsiibl/healing-station" target="_blank" rel="noopener noreferrer"
+       title="本项目的 GitHub 仓库：Iphsiibl/healing-station" aria-label="本项目的 GitHub 仓库 Iphsiibl/healing-station">
+      <svg class="gh-mark" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      <span>GitHub</span>
+    </a>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="功能模块">
+  <button class="tab is-active" role="tab" id="tab-clinic" aria-controls="panel-clinic" aria-selected="true" type="button">🏥 情绪急诊室</button>
+  <button class="tab" role="tab" id="tab-talk" aria-controls="panel-talk" aria-selected="false" type="button">💬 社恐话术机</button>
+  <button class="tab" role="tab" id="tab-fish" aria-controls="panel-fish" aria-selected="false" type="button">🐟 摸鱼补给站</button>
+  <button class="tab" role="tab" id="tab-game" aria-controls="panel-game" aria-selected="false" type="button">🎲 今日生存小游戏</button>
+  <button class="tab" role="tab" id="tab-games" aria-controls="panel-games" aria-selected="false" type="button">🎮 摸鱼游戏厅</button>
+  <button class="tab" role="tab" id="tab-report" aria-controls="panel-report" aria-selected="false" type="button">📈 疗愈周报</button>
+</nav>
+
+<main id="main">
+  <!-- ============ 情绪急诊室 ============ -->
+  <section class="panel is-active" id="panel-clinic" role="tabpanel" aria-labelledby="tab-clinic" tabindex="-1">
+    <form class="card" id="clinicForm" novalidate>
+      <h2 class="card-title">今天，你是什么状态？</h2>
+      <p class="card-hint">选一个最接近的。选不出来也没关系——说不清、刚被优化、担心被 AI 顶替、年纪开始卡线，都算数。</p>
+
+      <p class="welcome-back" id="clinicWelcome" hidden></p>
+
+      <div class="mood-grid" id="moodGrid" role="radiogroup" aria-label="选择今天的心情"></div>
+
+      <label class="field" for="clinicKeyword">
+        <span class="field-label">想说说具体发生了什么吗？（可留空）</span>
+        <input id="clinicKeyword" type="text" maxlength="40" autocomplete="off"
+               placeholder="例如：加班 / 开会 / 被优化 / 绩效面谈 / 通勤 / 远程办公 / 过年回家">
+      </label>
+
+      <div class="btn-row">
+        <button class="btn primary" type="submit">🩺 给我开张诊断单</button>
+        <button class="btn ghost" type="button" id="clinicAgain">🎲 换一张诊断单</button>
+      </div>
+    </form>
+
+    <div class="result-card" id="clinicResult" hidden aria-live="polite">
+      <div class="stamp" aria-hidden="true">已诊断 · 不收费</div>
+      <p class="result-kicker" id="clinicMoodName">诊断书</p>
+      <h3 class="result-title" id="clinicTitle"></h3>
+      <p class="result-cause" id="clinicCause"></p>
+      <h4 class="result-sub">🧪 病历分析</h4>
+      <ul class="result-list" id="clinicAnalysis"></ul>
+      <h4 class="result-sub">💊 今日处方</h4>
+      <ul class="result-list remedies" id="clinicRemedies"></ul>
+      <h4 class="result-sub">💌 来自值班护士的话</h4>
+      <p class="result-blessing" id="clinicBlessing"></p>
+      <h4 class="result-sub">🩹 复诊提醒</h4>
+      <p class="result-checkup" id="clinicCheckup"></p>
+      <div class="btn-row">
+        <button class="btn ghost" type="button" id="clinicCopy">📋 复制诊断单</button>
+        <button class="btn ghost" type="button" id="clinicShare">🔗 复制分享链接</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 社恐话术机 ============ -->
+  <section class="panel" id="panel-talk" role="tabpanel" aria-labelledby="tab-talk" tabindex="-1" hidden>
+    <div class="card">
+      <h2 class="card-title">遇到什么场面了？</h2>
+      <p class="card-hint">挑一个最像你今天的，点一下。话术分四档：<b>怂</b>（安全牌）、<b>稳</b>（专业但有边界）、<b>浪</b>（幽默，胆子大）、<b>直球</b>（有底气地拒绝、把好处争取到手）。</p>
+      <div class="scene-grid" id="sceneGrid" role="group" aria-label="选择职场场景"></div>
+    </div>
+
+    <div class="result-card" id="talkResult" hidden aria-live="polite">
+      <p class="result-kicker" id="talkSceneName">话术</p>
+      <h3 class="result-title" id="talkTitle"></h3>
+      <div class="tone-tabs" role="tablist" aria-label="选择语气">
+        <button class="tone-btn is-active" role="tab" data-tone="safe" aria-selected="true" type="button">🙈 怂 · 安全牌</button>
+        <button class="tone-btn" role="tab" data-tone="pro" aria-selected="false" type="button">🧊 稳 · 有边界</button>
+        <button class="tone-btn" role="tab" data-tone="wild" aria-selected="false" type="button">🎪 浪 · 胆子大</button>
+        <button class="tone-btn" role="tab" data-tone="direct" aria-selected="false" type="button">🔥 直球 · 有底气</button>
+      </div>
+      <div class="reply-card" id="replyCard">
+        <p class="reply-text" id="replyText"></p>
+        <div class="btn-row">
+          <button class="btn primary" type="button" id="replyCopy">📋 复制这句</button>
+          <button class="btn ghost" type="button" id="replyReroll">🔁 换一句</button>
+        </div>
+      </div>
+      <p class="tip" id="talkTip"></p>
+      <div class="usage-note" id="talkUsage" hidden>
+        <h4 class="result-sub">⚠️ 使用提醒</h4>
+        <p class="usage-line usage-when" id="talkWhen"></p>
+        <p class="usage-line usage-avoid" id="talkAvoid"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 摸鱼补给站 ============ -->
+  <section class="panel" id="panel-fish" role="tabpanel" aria-labelledby="tab-fish" tabindex="-1" hidden>
+    <div class="card">
+      <h2 class="card-title">先假装你在工作</h2>
+      <p class="card-hint">挑一个背景音，把音量调到刚好盖住键盘声。全部声音由算法实时合成，不加载任何音频文件，断网也能用。</p>
+      <div class="sound-grid" id="soundGrid" role="group" aria-label="选择背景音"></div>
+      <p class="sound-status" id="soundStatus" role="status" aria-live="polite">还没有在放声音 · 点一个背景音试试 🌧️</p>
+
+      <label class="field" for="volRange">
+        <span class="field-label">音量 <span id="volValue">50%</span></span>
+        <input id="volRange" type="range" min="0" max="100" value="50" />
+      </label>
+
+      <div class="btn-row">
+        <button class="btn ghost" type="button" id="soundStop">⏹ 停止播放</button>
+        <button class="btn primary" type="button" id="bossKey">🕵 老板键（Esc）</button>
+      </div>
+      <p class="tip">小技巧：随时按 <b>Esc</b>（或点右上角的「老板键」），整站会立刻变成一份正在进行的「Q3 业务复盘」。</p>
+    </div>
+
+    <div class="card pomo-card">
+      <h2 class="card-title">番茄钟 · 假装专注</h2>
+      <p class="card-hint">25 分钟专注，5 分钟休息。到点有提示音。</p>
+      <div class="pomo">
+        <svg class="pomo-ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="pomo-track" cx="60" cy="60" r="52"></circle>
+          <circle class="pomo-prog" id="pomoRing" cx="60" cy="60" r="52"></circle>
+        </svg>
+        <div class="pomo-face">
+          <p class="pomo-time" id="pomoTime">25:00</p>
+          <p class="pomo-mode" id="pomoMode">专注中（未开始）</p>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" type="button" id="pomoStart">▶ 开始</button>
+        <button class="btn ghost" type="button" id="pomoReset">↺ 重置</button>
+        <button class="btn ghost" type="button" id="pomoModeBtn">🔄 切换 25 / 5 分钟</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 今日生存小游戏 ============ -->
+  <section class="panel" id="panel-game" role="tabpanel" aria-labelledby="tab-game" tabindex="-1" hidden>
+    <div class="card story-card" id="storyCard">
+      <h2 class="card-title">今天能准时下班吗？</h2>
+      <p class="card-hint">一部只有几个按钮的职场生存剧。没有正确答案，只有一条属于你的路。</p>
+      <div class="story-head">
+        <span class="story-emoji" id="storyEmoji">🌅</span>
+        <div class="story-head-text">
+          <h3 class="story-scene" id="storyScene">早上 8:55，工位</h3>
+          <p class="story-hearts" id="storyHearts"></p>
+        </div>
+      </div>
+      <p class="story-text" id="storyText"></p>
+      <div class="story-choices" id="storyChoices" role="group" aria-label="选择你的行动"></div>
+      <p class="story-tip" id="storyTip" hidden></p>
+      <div class="btn-row">
+        <button class="btn ghost" type="button" id="storyRestart">🔁 重新开始</button>
+        <button class="btn ghost" type="button" id="storyPathBtn">📜 看我走了哪条路</button>
+      </div>
+      <pre class="story-path" id="storyPath" hidden></pre>
+    </div>
+
+    <div class="result-card" id="storyEndingCard" hidden aria-live="polite">
+      <div class="stamp" aria-hidden="true">今日结局</div>
+      <p class="result-kicker" id="storyEndGrade"></p>
+      <h3 class="result-title" id="storyEndTitle"></h3>
+      <p class="result-cause" id="storyEndDesc"></p>
+      <h4 class="result-sub">💌 来自值班护士的话</h4>
+      <p class="result-blessing" id="storyEndComfort"></p>
+      <h4 class="result-sub">🧭 下次可以试试</h4>
+      <p class="tip" id="storyEndTip"></p>
+      <div class="btn-row">
+        <button class="btn primary" type="button" id="storyAgain">🔁 再来一局</button>
+      </div>
+    </div>
+  </section>
+  <!-- ============ 摸鱼游戏厅 ============ -->
+  <section class="panel" id="panel-games" role="tabpanel" aria-labelledby="tab-games" tabindex="-1" hidden>
+    <div class="card">
+      <h2 class="card-title">摸鱼游戏厅</h2>
+      <p class="card-hint">点开就能玩的像素小游戏：一局一分钟，手残也能玩。所有画面由代码现场画出来，不加载任何图片和音频文件。</p>
+      <p class="tip">v1.5 起画布翻倍到 320×288：墙、窗、挂钟、工位、地毯、木栈桥都是一颗一颗手绘的像素，细节比上一版多了一倍。</p>
+      <div id="gameHall"></div>
+      <p class="tip">想把最喜欢的那一款单独放进自己的网页？用 <b>&lt;iframe src="games/index.html?game=mole"&gt;</b> 就行。</p>
+    </div>
+  </section>
+  <!-- ============ 疗愈周报 ============ -->
+  <section class="panel" id="panel-report" role="tabpanel" aria-labelledby="tab-report" tabindex="-1" hidden>
+    <div class="card">
+      <h2 class="card-title">本周，你被哄了几次？</h2>
+      <p class="card-hint">所有记录只存在你自己的浏览器里，不上传、不联网。</p>
+
+      <div class="report-empty" id="reportEmpty" hidden>
+        <p class="report-empty-emoji" aria-hidden="true">🫙</p>
+        <p>本周还是空的。</p>
+        <p class="tip">先去急诊室开一张诊断单，或者去摸鱼补给站听三分钟雨。</p>
+      </div>
+
+      <div class="report-body" id="reportBody">
+        <p class="report-summary" id="reportSummary"></p>
+        <div class="report-stats" id="reportStats"></div>
+        <h4 class="result-sub">📊 近 7 天</h4>
+        <div class="report-chart" id="reportChart" role="img" aria-label="近七天使用次数柱状图"></div>
+        <h4 class="result-sub">🏷️ 这周的高频关键词</h4>
+        <div class="report-tags" id="reportTags"></div>
+        <div class="btn-row">
+          <button class="btn primary" type="button" id="reportCopy">📋 复制我的周报</button>
+          <button class="btn ghost" type="button" id="reportToClinic">🏥 回到急诊室</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <p>本站不提供医疗、法律或职业建议，只提供情绪上的一个沙发 🛋️　·　<a href="#" id="resetData">清空我的本地记录</a></p>
+  <p class="footer-gh">
+    <a class="gh-link" href="https://github.com/Iphsiibl/healing-station" target="_blank" rel="noopener noreferrer" title="在 GitHub 上查看本项目源码">
+      <svg class="gh-mark" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      <span class="gh-owner">Iphsiibl</span><span class="gh-sep">/</span><span class="gh-repo">healing-station</span>
+    </a>
+    <span class="gh-dot">·</span>
+    <a class="gh-link" href="https://github.com/Iphsiibl/healing-station/stargazers" target="_blank" rel="noopener noreferrer">⭐ 给它一颗星</a>
+    <span class="gh-dot">·</span>
+    <a class="gh-link" href="https://iphsiibl.github.io/healing-station/" target="_blank" rel="noopener noreferrer">🌐 在线体验</a>
+  </p>
+  <p class="version">v1.7.0 · 数据只存在你自己的浏览器里，不上传</p>
+</footer>
+
+<div class="boss-screen" id="bossScreen" role="dialog" aria-modal="true" aria-label="正在开会" tabindex="-1" hidden>
+  <div class="boss-doc">
+    <div class="boss-doc-head">
+      <h2>Q3 业务复盘 &amp; 下阶段目标对齐</h2>
+      <span class="boss-tag">内部资料 · 请勿外传</span>
+    </div>
+    <table class="boss-table">
+      <thead>
+        <tr><th>指标</th><th>本季度</th><th>目标</th><th>状态</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>活跃用户</td><td>128,400</td><td>130,000</td><td>98.8%</td></tr>
+        <tr><td>人均时长</td><td>27.4 分钟</td><td>30 分钟</td><td>91.3%</td></tr>
+        <tr><td>下季度核心目标</td><td colspan="3">把新用户首周留存从 42% 提升到 55%</td></tr>
+      </tbody>
+    </table>
+    <ul class="boss-list">
+      <li>① 数据口径已与增长组对齐，待最终确认</li>
+      <li>② 埋点方案本周五前补充完整</li>
+      <li>③ 下阶段重点：留存 &gt; 拉新</li>
+    </ul>
+    <p class="boss-hint">点击任意处返回 · 或按 Esc</p>
+  </div>
+</div>
+
+<script src="assets/js/data-moods.js"></script>
+<script src="assets/js/data-scenes.js"></script>
+<script src="assets/js/data-story.js"></script>
+<script src="assets/js/engine.js"></script>
+<script src="assets/js/audio.js"></script>
+<script src="games/pixel.js"></script>
+<script src="games/sprites.js"></script>
+<script src="games/game-mole.js"></script>
+<script src="games/game-dodge.js"></script>
+<script src="games/game-match3.js"></script>
+<script src="games/game-fish.js"></script>
+<script src="games/hall.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

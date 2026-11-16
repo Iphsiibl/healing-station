@@ -374,7 +374,7 @@ try {
 
 /* ---------------- 渲染断言 ---------------- */
 ok($$('.mood-btn').length === 12, '情绪按钮渲染 12 个', String($$('.mood-btn').length));
-ok($$('.scene-btn').length === 16, '场景按钮渲染 16 个', String($$('.scene-btn').length));
+ok($$('.scene-btn').length === 26, '场景按钮渲染 26 个', String($$('.scene-btn').length));
 ok($('#moodGrid').textContent.includes('累瘫了'), '心情文案已注入');
 ok($('#sceneGrid').textContent.includes('老板催进度'), '场景文案已注入');
 
@@ -410,13 +410,26 @@ $('#replyReroll').click();
 ok($('#replyText').textContent !== reply1, '「换一句」换出了不同话术');
 
 const toneBtns = $$('.tone-btn');
-ok(toneBtns.length === 3, '语气按钮 3 个');
+ok(toneBtns.length === 4, '语气按钮 4 个');
 toneBtns[2].click();
 ok(toneBtns[2].classList.contains('is-active'), '切换到「浪」语气后按钮高亮');
 ok($('#replyText').textContent !== reply1, '切换语气后话术随之改变');
 const wildReply = $('#replyText').textContent;
 $('#replyReroll').click();
 ok($('#replyText').textContent !== wildReply, '「浪」语气下换一句同样有效');
+
+/* 第 4 档语气：直球·有底气 */
+toneBtns[3].click();
+ok(toneBtns[3].classList.contains('is-active'), '切换到「直球」语气后按钮高亮');
+ok(toneBtns[3].getAttribute('aria-selected') === 'true', '直球语气同步 aria-selected');
+ok($('#replyText').textContent.length > 6, '直球语气有话术输出');
+
+/* ⚠️ 使用提醒 */
+ok($('#talkUsage').hidden === false, '使用提醒区块已显示');
+ok($('#talkWhen').textContent.length > 2, '使用提醒有「适合」内容');
+ok($('#talkAvoid').textContent.length > 2, '使用提醒有「别在」内容');
+ok($('#talkWhen').textContent.includes('适合'), '使用提醒含「适合」标签');
+ok($('#talkAvoid').textContent.includes('别在'), '使用提醒含「别在」标签');
 
 /* 复制 */
 $('#replyCopy').click();

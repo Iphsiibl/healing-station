@@ -213,7 +213,7 @@
   /**
    * 取一条话术
    * @param {string} sceneId 场景 id
-   * @param {string} toneKey safe/pro/wild
+   * @param {string} toneKey safe/pro/wild/direct
    * @param {string|number} seed 轮转计数（"换一句"每 +1）
    */
   function reply(sceneId, toneKey, seed) {
@@ -233,9 +233,12 @@
       sceneEmoji: scene.emoji,
       sceneDesc: scene.desc,
       tip: scene.tip,
+      when: scene.when || '',
+      avoid: scene.avoid || '',
       tone: tone,
       toneName: TONES[tone].name,
       toneEmoji: TONES[tone].emoji,
+      toneDesc: TONES[tone].desc || '',
       text: text,
       index: idx
     };
