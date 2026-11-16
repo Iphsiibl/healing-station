@@ -482,6 +482,105 @@ ok(html.indexOf('id="challengeCard"') !== -1 && html.indexOf('id="challengeDone"
 ok(appJs.indexOf('challengesDone') !== -1, '彩蛋完成状态存在本地存储');
 ok(appJs.indexOf('recordAction(\'c\')') !== -1, '彩蛋完成计入周报');
 
+/* ---------- 9. 周报增强与成就徽章（v1.10.0） ---------- */
+section('9. 周报增强与成就徽章（v1.10.0）');
+
+// 9.1 徽章数据
+const badgeData = require(path.join(JS, 'data-badges.js'));
+const badgeList = badgeData.items || [];
+ok(badgeList.length >= 6, '成就徽章 >= 6 枚', '实际 ' + badgeList.length);
+const badgeIds = new Set();
+badgeList.forEach(b => {
+  ok(!!b.id && !!b.name && !!b.emoji && !!b.desc, '徽章「' + b.id + '」字段完整');
+  ok(!badgeIds.has(b.id), '徽章 id 不重复：' + b.id);
+  badgeIds.add(b.id);
+  ok(b.need && ['total', 'streak', 'score'].indexOf(b.need.kind) !== -1, '徽章「' + b.id + '」解锁条件类型合法');
+  ok(b.need && b.need.value >= 1, '徽章「' + b.id + '」解锁条件为正数');
+  if (b.need.kind === 'total') {
+    ok(['d', 'r', 'f', 'p', 's', 'g', 'b', 'c'].indexOf(b.need.key) !== -1, '徽章「' + b.id + '」统计键合法');
+  }
+  ok(b.desc.length <= 60, '徽章「' + b.id + '」说明不长');
+});
+const badWords = ['排名', '倒数', '落后', '输', '失败', '连续中断'];
+badgeList.forEach(b => {
+  badWords.forEach(w => ok(b.desc.indexOf(w) === -1 && b.name.indexOf(w) === -1, '徽章「' + b.id + '」不含比较/惩罚字眼：' + w));
+});
+
+// 9.2 徽章进度计算
+const aggFull = { d: 3, r: 12, f: 2, p: 1, s: 1, g: 4, b: 3, c: 5, streak: 3, score: 1200 };
+const badges = engine.badgesFor(aggFull);
+ok(badges.length === badgeList.length, 'badgesFor 返回全部徽章', String(badges.length));
+ok(badges.every(b => b.unlocked), '数据齐全时六枚徽章全部解锁');
+const aggEmpty = { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, b: 0, c: 0, streak: 0, score: 0 };
+const badgesEmpty = engine.badgesFor(aggEmpty);
+ok(badgesEmpty.every(b => !b.unlocked), '没有记录时徽章全部未解锁');
+ok(badgesEmpty.every(b => b.pct === 0), '没有记录时徽章进度为 0');
+const partial = engine.badgeProgress({ need: { kind: 'total', key: 'r', value: 10 } }, { r: 4 });
+ok(partial.cur === 4 && partial.goal === 10 && partial.pct === 40 && !partial.unlocked, '徽章进度计算正确', JSON.stringify(partial));
+ok(engine.badges.length === badgeList.length, 'engine.badges 可读取徽章数据');
+
+// 9.3 连续天数：只鼓励，不惩罚
+const streakDays = {};
+streakDays['2026-11-15'] = { d: 1 };
+streakDays['2026-11-14'] = { d: 1 };
+streakDays['2026-11-13'] = { d: 1 };
+const streak3 = engine.streakOf(streakDays, '2026-11-15');
+ok(streak3.days === 3, '连续三天算 3 天', String(streak3.days));
+ok(streak3.active === true, '连续天数标记为有活动');
+ok(streak3.text.indexOf('连着来了 3 天') !== -1, '连续天数文案正确', streak3.text);
+const streakTodayMiss = engine.streakOf(streakDays, '2026-11-16');
+ok(streakTodayMiss.days === 3, '今天还没来不算断签', String(streakTodayMiss.days));
+const streakNone = engine.streakOf({}, '2026-11-15');
+ok(streakNone.days === 0 && streakNone.active === false, '没有记录时连续天数为 0');
+ok(streakNone.text.indexOf('没关系') !== -1, '断签文案是鼓励而不是惩罚', streakNone.text);
+const streakBroken = engine.streakOf({ '2026-11-15': { d: 1 }, '2026-11-13': { d: 1 } }, '2026-11-15');
+ok(streakBroken.days === 1, '中间断掉只算到最近一段', String(streakBroken.days));
+
+// 9.4 热力日历
+const heat = engine.heatmapDays(streakDays, '2026-11-15', 30);
+ok(heat.length === 30, '热力日历 30 格', String(heat.length));
+ok(heat[0].key < heat[29].key, '热力日历按时间从旧到新');
+ok(heat[29].key === '2026-11-15', '热力日历最后一天是今天', heat[29].key);
+ok(heat[29].level >= 1, '有记录的日子有颜色');
+ok(heat.filter(h => h.total === 0).every(h => h.level === 0), '没来的日子留空（level 0），不标红');
+const heatEmpty = engine.heatmapDays({}, '2026-11-15', 30);
+ok(heatEmpty.every(h => h.level === 0), '全空时日历全是留空格');
+ok(engine.heatmapDays(streakDays, '2026-11-15', 30).filter(h => h.total > 0).every(h => h.level >= 1 && h.level <= 4), '颜色分档在 1~4 之间');
+
+// 9.5 周 / 月视图
+const repMonth = engine.weeklyReport(days, todayStr, 30);
+ok(repMonth.days.length === 30, '月视图 30 天', String(repMonth.days.length));
+ok(repMonth.span === 30, '月视图 span 正确', String(repMonth.span));
+ok(repMonth.days[0].label.indexOf('/') !== -1, '月视图标签是日期', repMonth.days[0].label);
+ok(rep.days[0].label.indexOf('周') === 0, '周视图标签仍是星期', rep.days[0].label);
+const sumMonth = engine.reportSummary(repMonth, moodNames, endNames, 'month');
+ok(sumMonth.indexOf('这个月') !== -1, '月视图小结用「这个月」', sumMonth);
+const textMonth = engine.reportText(repMonth, sumMonth, 'month');
+ok(textMonth.indexOf('本月疗愈月报') !== -1, '月视图分享标题正确');
+ok(engine.reportText(rep, sum).indexOf('本周疗愈周报') !== -1, '周视图分享标题正确');
+
+// 9.6 分享模板
+const templates = engine.shareTemplates(rep, sum, aggFull);
+ok(templates.length === 3, '分享模板 3 种', String(templates.length));
+const tIds = new Set(templates.map(t => t.id));
+ok(tIds.size === 3, '分享模板 id 不重复');
+templates.forEach(t => {
+  ok(!!t.name && !!t.text, '分享模板「' + t.id + '」字段完整');
+  ok(t.text.indexOf('不解决问题') !== -1, '分享模板「' + t.id + '」带落款');
+  ok(t.text.indexOf('\n') !== -1, '分享模板「' + t.id + '」是多行文本');
+});
+ok(templates[0].text.indexOf('10 次') !== -1, '自嘲版带总次数', templates[0].text);
+ok(templates[1].text.indexOf('连着来了 3 天') !== -1, '打气版带连续天数');
+ok(templates[2].text.length < templates[0].text.length, '极简版最短', String(templates[2].text.length));
+
+// 9.7 页面与脚本接线
+ok(html.indexOf('assets/js/data-badges.js') !== -1, '引入 data-badges.js');
+ok(html.indexOf('id="reportHeatmap"') !== -1 && html.indexOf('id="reportBadges"') !== -1, '页面存在热力日历与徽章区');
+ok(html.indexOf('id="reportShare"') !== -1 && html.indexOf('id="reportWeek"') !== -1 && html.indexOf('id="reportMonth"') !== -1, '页面存在分享模板与周月切换');
+ok(html.indexOf('v1.10.0') !== -1, '页面版本号更新为 v1.10.0');
+ok(appJs.indexOf('streakOf') !== -1 && appJs.indexOf('badgesFor') !== -1 && appJs.indexOf('heatmapDays') !== -1, 'app.js 接上连续天数/徽章/热力日历');
+ok(appJs.indexOf('shareTemplates') !== -1, 'app.js 接上分享模板');
+
 /* ---------- 结果 ---------- */
 console.log('\n----------------------------------------');
 console.log('检查项：' + checks + '　失败：' + failures.length);

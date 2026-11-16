@@ -182,14 +182,14 @@
     } else {
       lines.push('医生翻了一下你的记录：这次的触发点不算大，更像是身体先喊了一声。');
     }
-    lines.push('综合来看，属于' + mood.desc + '的典型表现。下面的三张处方，按"先救急、再固本"的顺序开。');
+    lines.push('综合来看，属于' + mood.desc + '的典型表现。下面的' + chosen.length + '张处方，按"先救急、再固本"的顺序开。');
     return lines;
   }
 
   // 印章文字
   function stampText(moodId, seed) {
     var h = hash('stamp|' + moodId + '|' + seed) % 4;
-    var arr = ['打工人急救站', '今日已诊', '轻微症状', '建议躺平'];
+    var arr = ['打工人急救站', '今日已诊', '轻微症状', '建议歇会儿'];
     return arr[h];
   }
 
@@ -454,6 +454,7 @@
     var labels = ['日', '一', '二', '三', '四', '五', '六'];
     var base = new Date(String(todayStr || '') + 'T00:00:00');
     if (isNaN(base.getTime())) base = new Date();
+    var monthly = span > 7;
 
     var list = [], totals = { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, b: 0, c: 0 }, moods = {}, ends = {}, max = 0;
     for (var i = span - 1; i >= 0; i--) {
@@ -462,7 +463,7 @@
       var rec = (days && days[key]) || null;
       var row = {
         key: key,
-        label: '周' + labels[dt.getDay()],
+        label: monthly ? ((dt.getMonth() + 1) + '/' + dt.getDate()) : ('周' + labels[dt.getDay()]),
         date: (dt.getMonth() + 1) + '/' + dt.getDate(),
         d: rec ? (rec.d || 0) : 0,
         r: rec ? (rec.r || 0) : 0,
@@ -487,6 +488,7 @@
     }
     return {
       days: list,
+      span: span,
       totals: totals,
       max: max,
       moods: moods,
@@ -497,10 +499,156 @@
     };
   }
 
+  /* ---------- 模块五扩展（v1.10.0）：连续天数 / 热力日历 / 徽章 / 分享模板 ---------- */
+
+  // 某一天算不算「来过」：有任何一条记录就算
+  function dayTotal(rec) {
+    if (!rec) return 0;
+    return (rec.d || 0) + (rec.r || 0) + (rec.f || 0) + (rec.p || 0) +
+           (rec.s || 0) + (rec.g || 0) + (rec.b || 0) + (rec.c || 0);
+  }
+
+  /**
+   * 连续来了几天（只鼓励，不惩罚）
+   * 今天还没来不算断——从昨天往前数；连着断了也不说「失败」，只说可以重新开始。
+   * @param {object} days 本地记录 days 表
+   * @param {string} todayStr 今天（YYYY-M-D）
+   * @returns {{days:number, active:boolean, from:string, text:string}}
+   */
+  function streakOf(days, todayStr) {
+    var base = new Date(String(todayStr || '') + 'T00:00:00');
+    if (isNaN(base.getTime())) base = new Date();
+    var startOffset = dayTotal((days || {})[dayKey(base)]) ? 0 : 1; // 今天没来不算断
+    var n = 0, from = '';
+    for (var i = startOffset; i < 400; i++) {
+      var dt = new Date(base.getTime() - i * 86400000);
+      var key = dayKey(dt);
+      if (!dayTotal((days || {})[key])) break;
+      n++;
+      from = key;
+    }
+    var text;
+    if (n >= 2) text = '你已经连着来了 ' + n + ' 天了，慢慢来就好。';
+    else if (n === 1) text = '今天也来坐一会儿，很好。';
+    else text = '今天还没来，也没关系——什么时候想回来，随时都能重新开始。';
+    return { days: n, active: n > 0, from: from, text: text };
+  }
+
+  /**
+   * 近 count 天的热力日历数据（按时间从旧到新）
+   * 缺勤的日子留空（level 0），不标红、不标灰。
+   */
+  function heatmapDays(days, todayStr, count) {
+    count = count || 30;
+    var base = new Date(String(todayStr || '') + 'T00:00:00');
+    if (isNaN(base.getTime())) base = new Date();
+    var out = [];
+    for (var i = count - 1; i >= 0; i--) {
+      var dt = new Date(base.getTime() - i * 86400000);
+      var key = dayKey(dt);
+      var total = dayTotal((days || {})[key]);
+      var level = 0;
+      if (total >= 1) level = 1;
+      if (total >= 2) level = 2;
+      if (total >= 4) level = 3;
+      if (total >= 7) level = 4;
+      out.push({
+        key: key,
+        date: (dt.getMonth() + 1) + '/' + dt.getDate(),
+        total: total,
+        level: level
+      });
+    }
+    return out;
+  }
+
+  // 一枚徽章的解锁进度
+  function badgeProgress(badge, agg) {
+    var need = (badge && badge.need) || {};
+    var cur = 0, goal = Number(need.value) || 1;
+    if (need.kind === 'total') cur = Number((agg || {})[need.key]) || 0;
+    else if (need.kind === 'streak') cur = Number((agg || {}).streak) || 0;
+    else if (need.kind === 'score') cur = Number((agg || {}).score) || 0;
+    if (cur > goal) cur = goal;
+    return {
+      cur: cur,
+      goal: goal,
+      pct: goal ? Math.max(0, Math.min(100, Math.round((cur / goal) * 100))) : 0,
+      unlocked: cur >= goal
+    };
+  }
+
+  // 六枚徽章 + 各自的解锁情况
+  function badgesFor(agg) {
+    var list = (BADGES && BADGES.items) || [];
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i];
+      var p = badgeProgress(b, agg);
+      out.push({
+        id: b.id,
+        name: b.name,
+        emoji: b.emoji,
+        desc: b.desc,
+        need: b.need,
+        cur: p.cur,
+        goal: p.goal,
+        pct: p.pct,
+        unlocked: p.unlocked
+      });
+    }
+    return out;
+  }
+
+  /**
+   * 三种分享文案模板（纯文本，一键复制）
+   * 自嘲版 / 打气版 / 极简版 —— 不比较、不排名、不卖惨。
+   */
+  function shareTemplates(rep, summary, agg) {
+    var total = (rep && rep.total) || 0;
+    var streak = (agg && agg.streak) || 0;
+    var out = [];
+    var head = '【打工人急救站 · 疗愈周报】';
+
+    out.push({
+      id: 'joke',
+      name: '自嘲版',
+      text: [
+        head,
+        '本周营业时长：' + total + ' 次。',
+        streak >= 2 ? '连续来了 ' + streak + ' 天，主要靠惯性。' : '断断续续来过，属于随缘型选手。',
+        '摸鱼额度已用完，但情绪还在。',
+        '——不解决问题，只负责哄你开心。'
+      ].join('\n')
+    });
+
+    out.push({
+      id: 'cheer',
+      name: '打气版',
+      text: [
+        head,
+        summary || ('这周你被哄了 ' + total + ' 次。'),
+        streak >= 2 ? '你连着来了 ' + streak + ' 天，这本身就是一种坚持。' : '今天能来一次，就已经很好了。',
+        '愿你被生活温柔以待 🌿',
+        '——不解决问题，只负责哄你开心。'
+      ].join('\n')
+    });
+
+    out.push({
+      id: 'brief',
+      name: '极简版',
+      text: head + '\n' + total + ' 次，' + streak + ' 天。\n——不解决问题，只负责哄你开心。'
+    });
+
+    return out;
+  }
+
   // 周报小结（纯文字，交给界面直接显示）
-  function reportSummary(rep, moodNames, endNames) {
+  function reportSummary(rep, moodNames, endNames, period) {
+    var monthly = period === 'month';
+    var scope = monthly ? '这个月' : '这周';
     if (!rep || !rep.total) {
-      return '这周你还没来过急救站。没关系——不来，也是一种自我照顾。';
+      return scope + '你还没来过急救站。没关系——不来，也是一种自我照顾。';
     }
     var bits = [];
     if (rep.totals.d) bits.push('诊断 ' + rep.totals.d + ' 次');
@@ -512,7 +660,7 @@
     if (rep.totals.b) bits.push('呼吸 ' + rep.totals.b + ' 次');
     if (rep.totals.c) bits.push('彩蛋 ' + rep.totals.c + ' 个');
 
-    var text = '这周你在急救站被哄了 ' + rep.total + ' 次' + (bits.length ? '（' + bits.join('、') + '）' : '') + '。';
+    var text = scope + '你在急救站被哄了 ' + rep.total + ' 次' + (bits.length ? '（' + bits.join('、') + '）' : '') + '。';
     if (rep.topMood && moodNames && moodNames[rep.topMood]) {
       text += '最常出现的心情是「' + moodNames[rep.topMood] + '」。';
     }
@@ -524,8 +672,9 @@
   }
 
   // 可复制分享的周报
-  function reportText(rep, summary) {
-    var lines = ['【打工人急救站 · 本周疗愈周报】'];
+  function reportText(rep, summary, period) {
+    var monthly = period === 'month';
+    var lines = ['【打工人急救站 · ' + (monthly ? '本月疗愈月报' : '本周疗愈周报') + '】'];
     lines.push(summary || '');
     if (rep && rep.days) {
       lines.push('近 ' + rep.days.length + ' 天：' + rep.days.map(function (d) { return d.date + ' ' + d.total + ' 次'; }).join(' / '));
@@ -595,6 +744,10 @@
     return list[hash('challenge:' + key) % list.length];
   }
 
+  /* ---------- 模块五扩展：成就徽章（v1.10.0） ---------- */
+
+  var BADGES = root.HS_BADGES || (typeof require !== 'undefined' ? require('./data-badges.js') : {});
+
   /* ---------- 导出 ---------- */
 
   var ENGINE = {
@@ -626,12 +779,18 @@
     weeklyReport: weeklyReport,
     reportSummary: reportSummary,
     reportText: reportText,
+    streakOf: streakOf,
+    heatmapDays: heatmapDays,
+    badgeProgress: badgeProgress,
+    badgesFor: badgesFor,
+    shareTemplates: shareTemplates,
     get moods() { return MOODS; },
     get scenes() { return SCENE_DATA; },
     get tones() { return TONES; },
     get keywordPacks() { return PACKS; },
     get stories() { return STORIES; },
-    get story() { return storyCurrent(); }
+    get story() { return storyCurrent(); },
+    get badges() { return (BADGES && BADGES.items) || []; }
   };
 
   root.HS_ENGINE = ENGINE;

@@ -624,6 +624,88 @@ input[type="range"]:focus-visible { outline: 2px solid var(--coral); outline-off
 .report-empty p { margin: .2rem 0; }
 .report-empty-emoji { font-size: 2.6rem; line-height: 1.2; }
 
+/* 周 / 月切换 */
+.report-switch {
+  display: inline-flex; gap: .3rem; margin: 0 0 1rem;
+  padding: .25rem; border-radius: 999px;
+  background: var(--cream-2); border: 1px solid var(--line);
+}
+.switch-btn {
+  border: 0; cursor: pointer; font-family: inherit; font-size: .86rem;
+  padding: .35rem .95rem; border-radius: 999px; background: transparent; color: var(--ink-soft);
+  transition: background .2s ease, color .2s ease;
+}
+.switch-btn.is-selected { background: var(--coral); color: #fff; box-shadow: 0 2px 6px rgba(43,36,56,.16); }
+.switch-btn:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
+
+/* 连续天数 */
+.streak-card {
+  display: flex; align-items: center; gap: .6rem;
+  margin: 0 0 1rem; padding: .7rem .95rem;
+  border-radius: var(--radius-sm);
+  background: var(--lilac-soft); border-left: 4px solid var(--lilac);
+}
+.streak-emoji { font-size: 1.35rem; line-height: 1.2; }
+.streak-text { font-size: .92rem; line-height: 1.7; color: var(--ink); }
+
+/* 30 天热力日历 */
+.report-heatmap {
+  display: grid; grid-template-columns: repeat(15, 1fr); gap: .3rem;
+  margin: 0 0 1.1rem;
+}
+.heat-cell {
+  display: block; width: 100%; aspect-ratio: 1 / 1;
+  border-radius: 6px; background: var(--cream-2);
+  border: 1px solid var(--line);
+}
+.heat-cell.lv1 { background: var(--mint-soft); }
+.heat-cell.lv2 { background: var(--mint); }
+.heat-cell.lv3 { background: var(--lilac); }
+.heat-cell.lv4 { background: var(--coral); }
+.heat-cell:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
+
+/* 徽章 */
+.report-badges {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: .55rem; margin-bottom: 1.1rem;
+}
+.badge-card {
+  display: flex; flex-direction: column; gap: .2rem;
+  padding: .7rem .8rem; border-radius: var(--radius-sm);
+  background: var(--cream-2); border: 1px dashed var(--line);
+  opacity: .72;
+}
+.badge-card.is-unlocked {
+  opacity: 1; background: var(--butter-soft); border-style: solid; border-color: var(--butter);
+}
+.badge-emoji { font-size: 1.25rem; line-height: 1.2; }
+.badge-name { font-size: .92rem; font-weight: 700; color: var(--ink); }
+.badge-desc { font-size: .78rem; line-height: 1.6; color: var(--ink-soft); }
+
+/* 分享模板 */
+.report-share { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .6rem; }
+.share-btn {
+  border: 1px solid var(--line); background: var(--cream-2); cursor: pointer;
+  font-family: inherit; font-size: .84rem; color: var(--ink-soft);
+  padding: .35rem .9rem; border-radius: 999px;
+  transition: background .2s ease, color .2s ease;
+}
+.share-btn.is-selected { background: var(--mint); border-color: var(--mint); color: #fff; }
+.share-btn:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
+.report-share-preview {
+  margin: 0 0 1rem; padding: .8rem .9rem;
+  background: var(--cream-2); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .78rem; line-height: 1.75; color: var(--ink-soft);
+  white-space: pre-wrap; word-break: break-word;
+}
+
+/* 30 天柱状图：格子更密 */
+.report-chart.is-wide { grid-template-columns: repeat(30, 1fr); gap: .18rem; }
+.report-chart.is-wide .report-col-label { font-size: .5rem; }
+.report-chart.is-wide .report-col-n { font-size: .52rem; }
+.report-chart.is-wide .report-bar { border-radius: 3px 3px 0 0; }
+
 /* ---------- 记忆上次的心情 ---------- */
 .welcome-back {
   display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
@@ -668,4 +750,13 @@ input[type="range"]:focus-visible { outline: 2px solid var(--coral); outline-off
   .story-tab { padding: .42rem .7rem; gap: .4rem; }
   .story-tab-min { display: none; }
   .challenge-card { padding: .85rem .9rem; }
+  /* 窄屏：伪装页表格改成固定列宽 + 自动换行，避免把页面撑宽 */
+  .boss-doc { padding: 1rem .85rem; }
+  .boss-table { table-layout: fixed; font-size: .8rem; }
+  .boss-table th, .boss-table td { padding: .4rem .45rem; word-break: break-word; }
+  /* 窄屏：热力日历改成 10 列 3 行，格子不至于太小 */
+  .report-heatmap { grid-template-columns: repeat(10, 1fr); }
+  /* 窄屏：30 天柱状图只留柱子，日期标签藏起来（悬停/读屏仍有提示） */
+  .report-chart.is-wide { gap: .1rem; }
+  .report-chart.is-wide .report-col-label { display: none; }
 }

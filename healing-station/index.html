@@ -255,6 +255,11 @@
       <h2 class="card-title">本周，你被哄了几次？</h2>
       <p class="card-hint">所有记录只存在你自己的浏览器里，不上传、不联网。</p>
 
+      <div class="report-switch" role="group" aria-label="统计范围">
+        <button class="switch-btn is-selected" id="reportWeek" type="button" aria-pressed="true">📅 本周</button>
+        <button class="switch-btn" id="reportMonth" type="button" aria-pressed="false">🗓️ 本月</button>
+      </div>
+
       <div class="report-empty" id="reportEmpty" hidden>
         <p class="report-empty-emoji" aria-hidden="true">🫙</p>
         <p>本周还是空的。</p>
@@ -263,11 +268,20 @@
 
       <div class="report-body" id="reportBody">
         <p class="report-summary" id="reportSummary"></p>
+        <div class="streak-card" id="reportStreak"></div>
         <div class="report-stats" id="reportStats"></div>
-        <h4 class="result-sub">📊 近 7 天</h4>
+        <h4 class="result-sub" id="reportChartTitle">📊 近 7 天</h4>
         <div class="report-chart" id="reportChart" role="img" aria-label="近七天使用次数柱状图"></div>
-        <h4 class="result-sub">🏷️ 这周的高频关键词</h4>
+        <h4 class="result-sub">🗓️ 近 30 天</h4>
+        <div class="report-heatmap" id="reportHeatmap" role="img" aria-label="近三十天使用热力日历，越深表示当天来过的次数越多"></div>
+        <h4 class="result-sub">🏅 徽章</h4>
+        <div class="report-badges" id="reportBadges"></div>
+        <h4 class="result-sub" id="reportTagTitle">🏷️ 这周的高频关键词</h4>
         <div class="report-tags" id="reportTags"></div>
+        <h4 class="result-sub">📋 分享模板</h4>
+        <div class="report-share" id="reportShare" role="group" aria-label="分享文案模板"></div>
+        <pre class="report-share-preview" id="reportSharePreview"></pre>
+        <p class="tip">这些数字只是记录，不是对你这个人的评价。断签也不扣分，随时可以重新开始。</p>
         <div class="btn-row">
           <button class="btn primary" type="button" id="reportCopy">📋 复制我的周报</button>
           <button class="btn ghost" type="button" id="reportToClinic">🏥 回到急诊室</button>
@@ -289,7 +303,7 @@
     <span class="gh-dot">·</span>
     <a class="gh-link" href="https://iphsiibl.github.io/healing-station/" target="_blank" rel="noopener noreferrer">🌐 在线体验</a>
   </p>
-  <p class="version">v1.9.0 · 数据只存在你自己的浏览器里，不上传</p>
+  <p class="version">v1.10.0 · 数据只存在你自己的浏览器里，不上传</p>
 </footer>
 
 <div class="boss-screen" id="bossScreen" role="dialog" aria-modal="true" aria-label="正在开会" tabindex="-1" hidden>
@@ -316,6 +330,7 @@
 <script src="assets/js/data-challenges.js"></script>
 <script src="assets/js/data-breath.js"></script>
 <script src="assets/js/data-boss.js"></script>
+<script src="assets/js/data-badges.js"></script>
 <script src="assets/js/engine.js"></script>
 <script src="assets/js/audio.js"></script>
 <script src="games/pixel.js"></script>

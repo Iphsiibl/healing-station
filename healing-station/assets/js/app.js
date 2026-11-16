@@ -22,6 +22,10 @@
     energy: 0
   };
 
+  // 周报视图状态：7 天（周） / 30 天（月）；分享模板默认自嘲版
+  var reportSpan = 7;
+  var reportTemplate = 'joke';
+
   /* ---------- 小工具 ---------- */
   function $(sel) { return document.querySelector(sel); }
   function $$(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
@@ -886,15 +890,27 @@
     if (!body || !empty) return;
 
     var data = loadStore();
-    var rep = E.weeklyReport(data.days || {}, today(), 7);
-    var summary = E.reportSummary(rep, moodNameMap(), endingNameMap());
+    var days = data.days || {};
+    var period = reportSpan > 7 ? 'month' : 'week';
+    var rep = E.weeklyReport(days, today(), reportSpan);
+    var summary = E.reportSummary(rep, moodNameMap(), endingNameMap(), period);
 
     var hasData = rep.total > 0;
     body.hidden = !hasData;
     empty.hidden = hasData;
+    syncReportSwitch();
     if (!hasData) return;
 
     $('#reportSummary').textContent = summary;
+
+    // 连续天数（只鼓励，不惩罚）
+    var streak = E.streakOf(days, today());
+    var streakBox = $('#reportStreak');
+    if (streakBox) {
+      streakBox.innerHTML = '';
+      streakBox.appendChild(el('span', 'streak-emoji', streak.days >= 2 ? '🔥' : (streak.days === 1 ? '🌱' : '🤍')));
+      streakBox.appendChild(el('span', 'streak-text', streak.text));
+    }
 
     // 统计小卡
     var stats = $('#reportStats');
@@ -917,25 +933,60 @@
       stats.appendChild(box);
     });
 
-    // 近 7 天柱状图
+    // 近 7 天 / 近 30 天柱状图
     var chart = $('#reportChart');
-    chart.innerHTML = '';
-    rep.days.forEach(function (d) {
-      var col = el('div', 'report-col');
-      var n = el('span', 'report-col-n', d.total ? String(d.total) : '');
-      var bar = el('span', 'report-bar');
-      var h = rep.max ? Math.max(6, Math.round((d.total / rep.max) * 100)) : 6;
-      bar.style.height = h + '%';
-      var foot = el('span', 'report-col-label', d.label);
-      col.appendChild(n);
-      col.appendChild(bar);
-      col.appendChild(foot);
-      col.title = d.date + '：' + d.total + ' 次';
-      chart.appendChild(col);
-    });
+    var chartTitle = $('#reportChartTitle');
+    if (chartTitle) chartTitle.textContent = reportSpan > 7 ? '📊 近 30 天' : '📊 近 7 天';
+    if (chart) {
+      chart.setAttribute('aria-label', reportSpan > 7 ? '近三十天使用次数柱状图' : '近七天使用次数柱状图');
+      chart.className = 'report-chart' + (reportSpan > 7 ? ' is-wide' : '');
+      chart.innerHTML = '';
+      rep.days.forEach(function (d) {
+        var col = el('div', 'report-col');
+        var n = el('span', 'report-col-n', d.total ? String(d.total) : '');
+        var bar = el('span', 'report-bar');
+        var h = rep.max ? Math.max(6, Math.round((d.total / rep.max) * 100)) : 6;
+        bar.style.height = h + '%';
+        var foot = el('span', 'report-col-label', d.label);
+        col.appendChild(n);
+        col.appendChild(bar);
+        col.appendChild(foot);
+        col.title = d.date + '：' + d.total + ' 次';
+        chart.appendChild(col);
+      });
+    }
+
+    // 近 30 天热力日历（缺勤留空，不标红）
+    var heat = $('#reportHeatmap');
+    if (heat) {
+      heat.innerHTML = '';
+      E.heatmapDays(days, today(), 30).forEach(function (d) {
+        var cell = el('span', 'heat-cell lv' + d.level);
+        cell.title = d.date + '：' + d.total + ' 次';
+        cell.setAttribute('aria-label', d.date + ' ' + d.total + ' 次');
+        heat.appendChild(cell);
+      });
+    }
+
+    // 徽章
+    var badgeBox = $('#reportBadges');
+    if (badgeBox) {
+      badgeBox.innerHTML = '';
+      var agg = reportAgg(rep, streak);
+      E.badgesFor(agg).forEach(function (b) {
+        var card = el('div', 'badge-card' + (b.unlocked ? ' is-unlocked' : ''));
+        card.appendChild(el('span', 'badge-emoji', b.emoji));
+        card.appendChild(el('span', 'badge-name', b.name));
+        card.appendChild(el('span', 'badge-desc', b.unlocked ? b.desc : ('还差 ' + (b.goal - b.cur) + ' 次：' + b.desc)));
+        card.title = b.name + '：' + b.desc;
+        badgeBox.appendChild(card);
+      });
+    }
 
     // 高频关键词
     var tags = $('#reportTags');
+    var tagTitle = $('#reportTagTitle');
+    if (tagTitle) tagTitle.textContent = reportSpan > 7 ? '🏷️ 这段时间的高频关键词' : '🏷️ 这周的高频关键词';
     tags.innerHTML = '';
     var moodTop = [];
     for (var mk in rep.moods) {
@@ -949,6 +1000,75 @@
       moodTop.slice(0, 5).forEach(function (item) {
         tags.appendChild(el('span', 'report-tag', (names[item[0]] || item[0]) + ' × ' + item[1]));
       });
+    }
+
+    // 分享模板
+    renderShareTemplates(rep, summary, streak);
+  }
+
+  // 汇总徽章需要的计数：周报总数 + 连续天数 + 游戏厅历史最高分
+  function reportAgg(rep, streak) {
+    var agg = {
+      d: rep.totals.d, r: rep.totals.r, f: rep.totals.f, p: rep.totals.p,
+      s: rep.totals.s, g: rep.totals.g, b: rep.totals.b, c: rep.totals.c,
+      streak: streak.days, score: 0
+    };
+    try {
+      var raw = window.localStorage.getItem('healing-station:games');
+      var best = raw ? JSON.parse(raw) : {};
+      for (var k in best) {
+        if (Object.prototype.hasOwnProperty.call(best, k)) agg.score += Number(best[k]) || 0;
+      }
+    } catch (e) { /* 读不到就当 0 分 */ }
+    return agg;
+  }
+
+  // 三种分享模板：选中一个，复制按钮就复制它
+  function renderShareTemplates(rep, summary, streak) {
+    var box = $('#reportShare');
+    if (!box) return;
+    box.innerHTML = '';
+    var templates = E.shareTemplates(rep, summary, reportAgg(rep, streak));
+    if (!templates.some(function (t) { return t.id === reportTemplate; })) reportTemplate = templates[0].id;
+    templates.forEach(function (t) {
+      var btn = el('button', 'share-btn' + (t.id === reportTemplate ? ' is-selected' : ''), t.name);
+      btn.type = 'button';
+      btn.setAttribute('aria-pressed', t.id === reportTemplate ? 'true' : 'false');
+      btn.addEventListener('click', function () {
+        reportTemplate = t.id;
+        renderShareTemplates(rep, summary, streak);
+        toast('换成「' + t.name + '」了，复制看看 🐣');
+      });
+      box.appendChild(btn);
+    });
+    var cur = templates.filter(function (t) { return t.id === reportTemplate; })[0];
+    var preview = $('#reportSharePreview');
+    if (preview && cur) preview.textContent = cur.text;
+  }
+
+  // 当前选中的分享文案
+  function currentShareText() {
+    var data = loadStore();
+    var period = reportSpan > 7 ? 'month' : 'week';
+    var rep = E.weeklyReport(data.days || {}, today(), reportSpan);
+    var summary = E.reportSummary(rep, moodNameMap(), endingNameMap(), period);
+    var streak = E.streakOf(data.days || {}, today());
+    var templates = E.shareTemplates(rep, summary, reportAgg(rep, streak));
+    var cur = templates.filter(function (t) { return t.id === reportTemplate; })[0];
+    return cur ? cur.text : E.reportText(rep, summary, period);
+  }
+
+  // 周 / 月切换按钮的高亮
+  function syncReportSwitch() {
+    var w = $('#reportWeek');
+    var m = $('#reportMonth');
+    if (w) {
+      w.className = 'switch-btn' + (reportSpan === 7 ? ' is-selected' : '');
+      w.setAttribute('aria-pressed', reportSpan === 7 ? 'true' : 'false');
+    }
+    if (m) {
+      m.className = 'switch-btn' + (reportSpan > 7 ? ' is-selected' : '');
+      m.setAttribute('aria-pressed', reportSpan > 7 ? 'true' : 'false');
     }
   }
 
@@ -1135,13 +1255,26 @@
 
     // 疗愈周报
     renderReport();
+    var rWeek = $('#reportWeek');
+    var rMonth = $('#reportMonth');
+    if (rWeek) {
+      rWeek.addEventListener('click', function () {
+        reportSpan = 7;
+        syncReportSwitch();
+        renderReport();
+      });
+    }
+    if (rMonth) {
+      rMonth.addEventListener('click', function () {
+        reportSpan = 30;
+        syncReportSwitch();
+        renderReport();
+      });
+    }
     var rCopy = $('#reportCopy');
     if (rCopy) {
       rCopy.addEventListener('click', function () {
-        var data = loadStore();
-        var rep = E.weeklyReport(data.days || {}, today(), 7);
-        var summary = E.reportSummary(rep, moodNameMap(), endingNameMap());
-        copyText(E.reportText(rep, summary), '周报已复制，发给朋友互相取暖吧 🐣');
+        copyText(currentShareText(), '周报已复制，发给朋友互相取暖吧 🐣');
       });
     }
     var rClinic = $('#reportToClinic');

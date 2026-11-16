@@ -1186,6 +1186,111 @@ function auditReport() {
   mod.detail = '统计卡 ' + cardCount + ' 张 · 周报统计键 ' + totalsKeys.length +
     ' 个 · 周报返回字段 ' + repKeys.length + ' 个 · 窗口 ' + ((rep.days || []).length) + ' 天';
   if (cardRows.length) addTable(mod, '统计卡对照', ['卡片', '统计键', '结论'], cardRows);
+
+  /* ---------- v1.10.0：连续天数 / 热力日历 / 徽章 / 分享模板 ---------- */
+
+  // 成就徽章
+  var badgeData = null;
+  try { badgeData = require(path.join(JS_DIR, 'data-badges.js')); } catch (e) { /* ignore */ }
+  var badgeList = (badgeData && badgeData.items) || [];
+  if (badgeList.length >= 6) {
+    pass(mod, '成就徽章数量', badgeList.length + ' 枚');
+  } else {
+    fail(mod, '成就徽章数量', badgeList.length + ' 枚', '徽章少于 6 枚，成就感不足');
+  }
+  var badgeIds = new Set();
+  var badgeBad = [];
+  badgeList.forEach(function (b) {
+    if (badgeIds.has(b.id)) badgeBad.push('id 重复：' + b.id);
+    badgeIds.add(b.id);
+    if (!b.name || !b.emoji || !b.desc) badgeBad.push('字段缺失：' + b.id);
+    if (!b.need || ['total', 'streak', 'score'].indexOf(b.need.kind) === -1) badgeBad.push('解锁条件异常：' + b.id);
+  });
+  if (badgeBad.length) {
+    badgeBad.forEach(function (b) { fail(mod, '徽章字段合法', b, '徽章定义有问题'); });
+  } else {
+    pass(mod, '徽章字段合法', badgeList.length + ' 枚全部通过');
+  }
+  // 徽章文案不得带比较/惩罚意味
+  var punishWords = ['排名', '倒数', '落后', '失败', '连续中断'];
+  var punishHits = [];
+  badgeList.forEach(function (b) {
+    punishWords.forEach(function (w) {
+      if ((b.desc || '').indexOf(w) !== -1 || (b.name || '').indexOf(w) !== -1) punishHits.push(b.id + '：' + w);
+    });
+  });
+  if (punishHits.length) {
+    punishHits.forEach(function (p) { warn(mod, '徽章文案不制造压力', p, '徽章应当只鼓励、不比较'); });
+  } else {
+    pass(mod, '徽章文案不制造压力', '未命中比较/惩罚字眼');
+  }
+
+  // 连续天数：只鼓励不惩罚（注意：日期键是「2026-11-15」这种不补零的写法）
+  var streakDays = {};
+  streakDays['2026-11-15'] = { d: 1 };
+  streakDays['2026-11-14'] = { d: 1 };
+  streakDays['2026-11-13'] = { d: 1 };
+  try {
+    var st3 = engine.streakOf(streakDays, '2026-11-15');
+    var st0 = engine.streakOf({}, '2026-11-15');
+    if (st3.days === 3) {
+      pass(mod, '连续天数计算', '连续 3 天 → 3 天');
+    } else {
+      fail(mod, '连续天数计算', '得到 ' + st3.days, '连续天数算错');
+    }
+    if (st0.days === 0 && String(st0.text).indexOf('没关系') !== -1) {
+      pass(mod, '断签不惩罚', st0.text);
+    } else {
+      fail(mod, '断签不惩罚', st0.text, '断签文案应当是鼓励而不是惩罚');
+    }
+  } catch (e) {
+    fail(mod, 'streakOf 可用', '抛异常', String(e && e.message));
+  }
+
+  // 热力日历
+  try {
+    var heat = engine.heatmapDays(streakDays, '2026-11-15', 30);
+    var emptyCells = heat.filter(function (h) { return h.total === 0; });
+    var badEmpty = emptyCells.filter(function (h) { return h.level !== 0; });
+    if (heat.length === 30 && !badEmpty.length) {
+      pass(mod, '30 天热力日历', '30 格，缺勤留空不标红');
+    } else {
+      fail(mod, '30 天热力日历', heat.length + ' 格 / ' + badEmpty.length + ' 格异常', '日历格数或留空规则不对');
+    }
+  } catch (e) {
+    fail(mod, 'heatmapDays 可用', '抛异常', String(e && e.message));
+  }
+
+  // 周 / 月切换
+  var indexHtmlSrc = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  if (indexHtmlSrc.indexOf('id="reportWeek"') !== -1 && indexHtmlSrc.indexOf('id="reportMonth"') !== -1) {
+    pass(mod, '周 / 月切换入口', '页面有本周与本月两个按钮');
+  } else {
+    fail(mod, '周 / 月切换入口', '缺失', '页面缺少 reportWeek / reportMonth');
+  }
+  try {
+    var rep30 = engine.weeklyReport({}, '2026-11-15', 30);
+    if (rep30.days.length === 30) {
+      pass(mod, '月视图窗口', '30 天');
+    } else {
+      fail(mod, '月视图窗口', rep30.days.length + ' 天', '月视图应为 30 天');
+    }
+  } catch (e) {
+    fail(mod, '月视图窗口', '抛异常', String(e && e.message));
+  }
+
+  // 分享模板
+  try {
+    var tpl = engine.shareTemplates(rep, '', { streak: 2 });
+    if (tpl.length === 3 && tpl.every(function (t) { return t.name && t.text; })) {
+      pass(mod, '分享模板', '3 种：' + tpl.map(function (t) { return t.name; }).join('/'));
+    } else {
+      fail(mod, '分享模板', tpl.length + ' 种', '分享模板应当是 3 种且字段完整');
+    }
+  } catch (e) {
+    fail(mod, 'shareTemplates 可用', '抛异常', String(e && e.message));
+  }
+
   return mod;
 }
 
@@ -1496,6 +1601,130 @@ function auditGlobal() {
 }
 
 /* =========================================================
+   全站终审：跨模块重复文案（v1.10.0 新增）
+   —— 各模块单独看都干净，放在一起会不会「说了两遍一样的话」？
+   ========================================================= */
+function auditCrossModule() {
+  var mod = newModule('cross', '跨模块重复', '🔗');
+  var pool = [];
+
+  function add(module, field, text) {
+    if (text == null) return;
+    var s = String(text).trim();
+    if (s.length < 6) return;                    // 太短的通用词不参与比较
+    pool.push({ module: module, field: field, text: s });
+  }
+
+  try {
+    var moods = require(path.join(JS_DIR, 'data-moods.js'));
+    (moods.moods || []).forEach(function (m) {
+      (m.diagnoses || []).forEach(function (x, i) { add('情绪急诊室', '心情「' + m.name + '」·诊断' + (i + 1), x); });
+      (m.causes || []).forEach(function (x, i) { add('情绪急诊室', '心情「' + m.name + '」·病因' + (i + 1), x); });
+      (m.blessings || []).forEach(function (x, i) { add('情绪急诊室', '心情「' + m.name + '」·祝福' + (i + 1), x); });
+      (m.remedies || []).forEach(function (r, i) {
+        add('情绪急诊室', '心情「' + m.name + '」·处方' + (i + 1) + '标题', r.t);
+        add('情绪急诊室', '心情「' + m.name + '」·处方' + (i + 1) + '说明', r.d);
+      });
+    });
+    Object.keys(moods.keywordPacks || {}).forEach(function (k) {
+      var p = moods.keywordPacks[k];
+      (p.causes || []).forEach(function (x, i) { add('情绪急诊室', '关键词包「' + k + '」·病因' + (i + 1), x); });
+      (p.blessings || []).forEach(function (x, i) { add('情绪急诊室', '关键词包「' + k + '」·祝福' + (i + 1), x); });
+      (p.remedies || []).forEach(function (r, i) {
+        add('情绪急诊室', '关键词包「' + k + '」·处方' + (i + 1) + '标题', r.t);
+        add('情绪急诊室', '关键词包「' + k + '」·处方' + (i + 1) + '说明', r.d);
+      });
+    });
+  } catch (e) { fail(mod, '情绪急诊室文案可读', '抛异常', String(e && e.message)); }
+
+  try {
+    var scenes = require(path.join(JS_DIR, 'data-scenes.js'));
+    (scenes.scenes || []).forEach(function (s) {
+      Object.keys(s.replies || {}).forEach(function (tone) {
+        (s.replies[tone] || []).forEach(function (t, i) { add('社恐话术机', '场景「' + s.name + '」·' + tone + (i + 1), t); });
+      });
+      add('社恐话术机', '场景「' + s.name + '」·提示', s.tip);
+      add('社恐话术机', '场景「' + s.name + '」·适合', s.when);
+      add('社恐话术机', '场景「' + s.name + '」·别在', s.avoid);
+    });
+  } catch (e) { fail(mod, '社恐话术机文案可读', '抛异常', String(e && e.message)); }
+
+  ['data-story.js', 'data-story2.js'].forEach(function (file) {
+    try {
+      var st = require(path.join(JS_DIR, file));
+      var label = file === 'data-story.js' ? '生存故事·第一部' : '生存故事·第二部';
+      Object.keys(st.nodes || {}).forEach(function (id) {
+        var n = st.nodes[id];
+        add(label, '节点「' + id + '」·正文', n.text);
+        (n.choices || []).forEach(function (c, i) {
+          add(label, '节点「' + id + '」·选项' + (i + 1), c.label);
+          add(label, '节点「' + id + '」·回响' + (i + 1), c.tip);
+        });
+      });
+      Object.keys(st.endings || {}).forEach(function (id) {
+        var e2 = st.endings[id];
+        add(label, '结局「' + id + '」·描述', e2.desc);
+        add(label, '结局「' + id + '」·安慰', e2.comfort);
+        add(label, '结局「' + id + '」·提示', e2.tip);
+      });
+    } catch (e) { fail(mod, file + ' 文案可读', '抛异常', String(e && e.message)); }
+  });
+
+  try {
+    var chal = require(path.join(JS_DIR, 'data-challenges.js'));
+    (chal.items || []).forEach(function (c) {
+      add('每日彩蛋', '彩蛋「' + c.id + '」', c.text);
+      add('每日彩蛋', '彩蛋「' + c.id + '」·提示', c.hint);
+    });
+  } catch (e) { fail(mod, '每日彩蛋文案可读', '抛异常', String(e && e.message)); }
+
+  try {
+    var badges = require(path.join(JS_DIR, 'data-badges.js'));
+    (badges.items || []).forEach(function (b) {
+      add('成就徽章', '徽章「' + b.id + '」·名称', b.name);
+      add('成就徽章', '徽章「' + b.id + '」·说明', b.desc);
+    });
+  } catch (e) { fail(mod, '成就徽章文案可读', '抛异常', String(e && e.message)); }
+
+  try {
+    var breath = require(path.join(JS_DIR, 'data-breath.js'));
+    (breath.exercises || []).forEach(function (x) {
+      add('呼吸引导', '呼吸「' + x.id + '」·说明', x.desc);
+      add('呼吸引导', '呼吸「' + x.id + '」·适用', x.when);
+      add('呼吸引导', '呼吸「' + x.id + '」·结束语', x.finish);
+      (x.phases || []).forEach(function (p, i) { add('呼吸引导', '呼吸「' + x.id + '」·阶段' + (i + 1), p.tip); });
+    });
+  } catch (e) { fail(mod, '呼吸引导文案可读', '抛异常', String(e && e.message)); }
+
+  var dup = scanDuplicates(pool, 0.75);
+  var crossExact = dup.exact.filter(function (d) { return d.a.module !== d.b.module; });
+  var crossNear = dup.near.filter(function (d) { return d.a.module !== d.b.module; });
+
+  if (crossExact.length) {
+    crossExact.slice(0, 20).forEach(function (d) {
+      fail(mod, '跨模块无完全重复文案', d.a.module + '「' + d.a.field + '」= ' + d.b.module + '「' + d.b.field + '」',
+        '两个模块说了同一句话：' + String(d.a.text).slice(0, 30));
+    });
+  } else {
+    pass(mod, '跨模块无完全重复文案', '共比对 ' + pool.length + ' 条文案');
+  }
+
+  if (crossNear.length) {
+    crossNear.slice(0, 20).forEach(function (d) {
+      warn(mod, '跨模块无近重复文案', d.a.module + '「' + d.a.field + '」≈ ' + d.b.module + '「' + d.b.field + '」',
+        '相似度 ' + d.sim.toFixed(2) + '：' + String(d.a.text).slice(0, 24) + ' / ' + String(d.b.text).slice(0, 24));
+    });
+  } else {
+    pass(mod, '跨模块无近重复文案', '共比对 ' + pool.length + ' 条文案');
+  }
+
+  mod.entries = pool.length;
+  mod.detail = '跨模块比对 ' + pool.length + ' 条文案 · 完全重复 ' + crossExact.length +
+    ' 处 · 近重复 ' + crossNear.length + ' 处';
+  return mod;
+}
+
+/* =========================================================
    渲染：Markdown / JSON
    ========================================================= */
 function mdEscape(s) {
@@ -1656,6 +1885,7 @@ function main(argv) {
   auditChallenges();
   auditReport();
   auditGames();
+  auditCrossModule();
   auditGlobal();
 
   var text = asJson ? renderJSON() : renderMarkdown();
