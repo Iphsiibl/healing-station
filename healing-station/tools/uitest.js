@@ -373,7 +373,7 @@ try {
 }
 
 /* ---------------- 渲染断言 ---------------- */
-ok($$('.mood-btn').length === 8, '情绪按钮渲染 8 个', String($$('.mood-btn').length));
+ok($$('.mood-btn').length === 12, '情绪按钮渲染 12 个', String($$('.mood-btn').length));
 ok($$('.scene-btn').length === 16, '场景按钮渲染 16 个', String($$('.scene-btn').length));
 ok($('#moodGrid').textContent.includes('累瘫了'), '心情文案已注入');
 ok($('#sceneGrid').textContent.includes('老板催进度'), '场景文案已注入');
@@ -389,9 +389,11 @@ ok($('#clinicResult').hidden === false, '诊断后结果卡显示');
 ok($('#clinicTitle').textContent.length > 2, '诊断标题已填充：' + $('#clinicTitle').textContent);
 ok($('#clinicCause').textContent.length > 5, '病因已填充');
 ok($$('#clinicAnalysis li').length >= 2, '病历分析渲染为列表项', String($$('#clinicAnalysis li').length));
-ok($$('#clinicRemedies li').length === 3, '处方渲染 3 条', String($$('#clinicRemedies li').length));
+ok($$('#clinicRemedies li').length >= 3, '处方渲染 3~4 条', String($$('#clinicRemedies li').length));
 ok($('#clinicRemedies').textContent.includes('加班'), '关键词「加班」处方生效');
 ok($('#clinicBlessing').textContent.length > 4, '护士寄语已填充');
+ok($('#clinicCheckup').textContent.length > 4, '复诊提醒已填充');
+ok($('#clinicCheckup').hidden === false, '复诊提醒可见');
 ok($('#clinicMoodName').textContent.includes('加班'), '诊断单头部显示命中关键词');
 
 const title1 = $('#clinicTitle').textContent;

@@ -53,7 +53,7 @@
   <section class="panel is-active" id="panel-clinic" role="tabpanel" aria-labelledby="tab-clinic" tabindex="-1">
     <form class="card" id="clinicForm" novalidate>
       <h2 class="card-title">今天，你是什么状态？</h2>
-      <p class="card-hint">选一个最接近的。选不出来也没关系，最下面那个「说不清」也算数。</p>
+      <p class="card-hint">选一个最接近的。选不出来也没关系——说不清、刚被优化、担心被 AI 顶替、年纪开始卡线，都算数。</p>
 
       <p class="welcome-back" id="clinicWelcome" hidden></p>
 
@@ -62,7 +62,7 @@
       <label class="field" for="clinicKeyword">
         <span class="field-label">想说说具体发生了什么吗？（可留空）</span>
         <input id="clinicKeyword" type="text" maxlength="40" autocomplete="off"
-               placeholder="例如：加班 / 开会 / 被抢功 / 地铁挤成饼 / 老板又改需求">
+               placeholder="例如：加班 / 开会 / 被优化 / 绩效面谈 / 通勤 / 远程办公 / 过年回家">
       </label>
 
       <div class="btn-row">
@@ -82,6 +82,8 @@
       <ul class="result-list remedies" id="clinicRemedies"></ul>
       <h4 class="result-sub">💌 来自值班护士的话</h4>
       <p class="result-blessing" id="clinicBlessing"></p>
+      <h4 class="result-sub">🩹 复诊提醒</h4>
+      <p class="result-checkup" id="clinicCheckup"></p>
       <div class="btn-row">
         <button class="btn ghost" type="button" id="clinicCopy">📋 复制诊断单</button>
         <button class="btn ghost" type="button" id="clinicShare">🔗 复制分享链接</button>
@@ -243,7 +245,7 @@
     <span class="gh-dot">·</span>
     <a class="gh-link" href="https://iphsiibl.github.io/healing-station/" target="_blank" rel="noopener noreferrer">🌐 在线体验</a>
   </p>
-  <p class="version">v1.5.1 · 数据只存在你自己的浏览器里，不上传</p>
+  <p class="version">v1.6.0 · 数据只存在你自己的浏览器里，不上传</p>
 </footer>
 
 <div class="boss-screen" id="bossScreen" role="dialog" aria-modal="true" aria-label="正在开会" tabindex="-1" hidden>

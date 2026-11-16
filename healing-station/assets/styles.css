@@ -180,9 +180,10 @@ main { max-width: 1080px; margin: 0 auto; padding: 1.4rem 1.25rem 2.5rem; }
 /* ---------- 心情选择 ---------- */
 .mood-grid {
   display: grid; gap: .7rem;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-bottom: 1.3rem;
 }
+@media (max-width: 900px) { .mood-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .mood-btn {
   font: inherit; cursor: pointer; text-align: left;
   border: 2px solid var(--line); background: var(--cream-2); color: var(--ink);
@@ -272,6 +273,13 @@ html[data-theme="night"] .result-sub { color: var(--mint); }
   background: var(--butter-soft); border-radius: var(--radius-sm);
   border-left: 4px solid var(--butter); font-size: 1.02rem;
 }
+/* 复诊提醒：一句明天就能做的话 */
+.result-checkup {
+  margin: .4rem 0 1.2rem; padding: .9rem 1.1rem;
+  background: var(--mint-soft); border-radius: var(--radius-sm);
+  border-left: 4px solid var(--mint); font-size: 1rem; line-height: 1.7;
+}
+.result-checkup[hidden] { display: none; }
 .tip { margin: 1.1rem 0 0; color: var(--ink-soft); font-size: .9rem; }
 
 /* 结果卡刷新时的轻微弹跳 */

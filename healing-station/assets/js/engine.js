@@ -50,15 +50,32 @@
   /* ---------- 关键词包匹配 ---------- */
 
   // 返回命中的关键词包列表（最多 2 个，按输入中出现的顺序）
+  // v1.6.0 起：除包名本身，还认包里的同义说法（keywords），比如输入「被优化」也能命中「裁员」包
   function matchPacks(input) {
     var text = String(input || '').trim();
     if (!text) return [];
+    var lower = text.toLowerCase();
     var keys = Object.keys(PACKS);
     var hits = [];
-    var i, k;
+    var i, k, j, list, word, pos;
     for (i = 0; i < keys.length; i++) {
       k = keys[i];
-      if (text.indexOf(k) !== -1) hits.push({ key: k, pack: PACKS[k], pos: text.indexOf(k) });
+      pos = text.indexOf(k);
+      if (pos !== -1) {
+        hits.push({ key: k, pack: PACKS[k], pos: pos });
+        continue;
+      }
+      list = PACKS[k].keywords;
+      if (!list || !list.length) continue;
+      for (j = 0; j < list.length; j++) {
+        word = String(list[j]);
+        if (!word) continue;
+        pos = lower.indexOf(word.toLowerCase());
+        if (pos !== -1) {
+          hits.push({ key: word, pack: PACKS[k], pos: pos, via: k });
+          break;
+        }
+      }
     }
     hits.sort(function (a, b) { return a.pos - b.pos; });
     return hits.slice(0, 2);
@@ -106,13 +123,9 @@
     var cause = causes[(hash(base + '|c') + counter) % causes.length];
     var blessing = blessings[(hash(base + '|b') + counter) % blessings.length];
 
-    // 处方固定取 3 条，连续轮转
-    var chosen = [];
-    var start = (hash(base + '|r') + counter) % remedies.length;
-    for (var k = 0; k < 3 && k < remedies.length; k++) {
-      chosen.push(remedies[(start + k) % remedies.length]);
-    }
-    if (chosen.length < 3) chosen = remedies.slice(0, 3);
+    // 处方全部列出（v1.6.0 起：一条都不浪费，轮转留给诊断名 / 病因 / 祝福）
+    var chosen = remedies.slice();
+    if (!chosen.length) chosen = mood.remedies.slice(0, 3);
 
     return {
       moodId: mood.id,
@@ -125,8 +138,9 @@
       analysis: buildAnalysis(mood, keyword, hits, chosen),
       remedies: chosen,
       blessing: blessing,
+      checkup: mood.checkup || '',
       stamp: stampText(mood.id, base + counter),
-      copyText: buildCopyText(mood, diagnosis, cause, chosen, blessing)
+      copyText: buildCopyText(mood, diagnosis, cause, chosen, blessing, mood.checkup || '')
     };
   }
 
@@ -179,7 +193,7 @@
   }
 
   // 一键复制的完整文本
-  function buildCopyText(mood, diagnosis, cause, remedies, blessing) {
+  function buildCopyText(mood, diagnosis, cause, remedies, blessing, checkup) {
     var lines = [];
     lines.push('【打工人急救站 · 诊断单】');
     lines.push('情绪：' + mood.emoji + ' ' + mood.name);
@@ -189,6 +203,7 @@
       lines.push('处方 ' + (i + 1) + '：' + remedies[i].t + '——' + remedies[i].d);
     }
     lines.push('医嘱：' + blessing);
+    if (checkup) lines.push('复诊提醒：' + checkup);
     lines.push('——记得按时吃饭、按时下班。');
     return lines.join('\n');
   }
@@ -243,6 +258,7 @@
       nodeId: STORY.start,
       heart: STORY.hearts || 5,
       maxHeart: STORY.hearts || 5,
+      maxSteps: STORY.maxSteps || 40,
       path: [],
       finished: false,
       endingId: ''
@@ -290,6 +306,18 @@
     if (STORY.endings[state.nodeId]) {
       state.finished = true;
       state.endingId = state.nodeId;
+      return state;
+    }
+
+    // v1.6.0：剧情里本来就有循环（绕圈型日常），这里用步数上限兜底，
+    // 走到上限还没收尾就强制落到 loopEnding，保证任何路径都能走到结局。
+    if (state.path.length >= (state.maxSteps || 40)) {
+      var fallback = STORY.loopEnding;
+      if (fallback && STORY.endings[fallback]) {
+        state.nodeId = fallback;
+        state.finished = true;
+        state.endingId = fallback;
+      }
     }
     return state;
   }

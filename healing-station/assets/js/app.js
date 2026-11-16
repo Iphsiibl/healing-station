@@ -208,6 +208,12 @@
 
     $('#clinicBlessing').textContent = r.blessing;
 
+    var checkup = $('#clinicCheckup');
+    if (checkup) {
+      checkup.textContent = r.checkup || '';
+      checkup.hidden = !r.checkup;
+    }
+
     var card = $('#clinicResult');
     card.hidden = false;
     card.classList.remove('is-fresh');

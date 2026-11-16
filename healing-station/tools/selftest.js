@@ -43,11 +43,12 @@ const tones = scenesData.tones;
 /* ---------- 1. 数据完整性 ---------- */
 section('1. 数据完整性');
 
-ok(moods.length >= 8, '心情数量 >= 8', '实际 ' + moods.length);
+ok(moods.length >= 12, '心情数量 >= 12', '实际 ' + moods.length);
+ok(Object.keys(packs).length >= 18, '关键词包数量 >= 18', '实际 ' + Object.keys(packs).length);
 ok(scenes.length >= 12, '场景数量 >= 12', '实际 ' + scenes.length);
 ok(Object.keys(tones).length === 3, '语气档位为 3 档', Object.keys(tones).join(','));
 
-const MOOD_FIELDS = ['id', 'name', 'emoji', 'desc', 'diagnoses', 'causes', 'remedies', 'blessings'];
+const MOOD_FIELDS = ['id', 'name', 'emoji', 'desc', 'diagnoses', 'causes', 'remedies', 'blessings', 'checkup'];
 const moodIds = new Set();
 moods.forEach(m => {
   MOOD_FIELDS.forEach(f => ok(m[f] !== undefined && m[f] !== null && m[f] !== '', '心情「' + (m.name || m.id) + '」含字段 ' + f));
@@ -56,13 +57,25 @@ moods.forEach(m => {
   ok(m.diagnoses.length >= 3, '心情「' + m.name + '」诊断 >= 3 条');
   ok(m.causes.length >= 3, '心情「' + m.name + '」病因 >= 3 条');
   ok(m.remedies.length >= 4, '心情「' + m.name + '」处方 >= 4 条');
-  ok(m.blessings.length >= 3, '心情「' + m.name + '」祝福 >= 3 条');
+  ok(m.blessings.length >= 5, '心情「' + m.name + '」祝福 >= 5 条', '实际 ' + m.blessings.length);
   m.remedies.forEach(r => ok(r.t && r.d, '心情「' + m.name + '」每条处方有标题与说明'));
 });
 
 Object.keys(packs).forEach(k => {
   ok(!!packs[k].causes && !!packs[k].remedies && !!packs[k].blessings, '关键词包「' + k + '」结构完整');
+  ok(packs[k].causes.length >= 2, '关键词包「' + k + '」病因 >= 2 条');
+  ok(packs[k].remedies.length >= 3, '关键词包「' + k + '」处方 >= 3 条');
+  ok(packs[k].blessings.length >= 3, '关键词包「' + k + '」祝福 >= 3 条');
+  ok(Array.isArray(packs[k].keywords) && packs[k].keywords.length >= 4, '关键词包「' + k + '」同义说法 >= 4 条');
   packs[k].remedies.forEach(r => ok(r.t && r.d, '关键词包「' + k + '」处方项完整'));
+});
+
+// 关键词同义说法：每个包的第一个同义词都要能被 matchPacks 命中
+Object.keys(packs).forEach(k => {
+  const kw = (packs[k].keywords || [])[0];
+  if (!kw) return;
+  const hit = engine.matchPacks('今天' + kw + '，心累');
+  ok(hit.some(h => h.key === kw || h.via === k), '同义说法「' + kw + '」能命中包「' + k + '」');
 });
 
 const sceneIds = new Set();
@@ -86,9 +99,11 @@ moods.forEach(m => {
   if (!r) return;
   ok(r.title && r.cause && r.blessing, '诊断单三段齐全：' + m.id);
   ok(Array.isArray(r.analysis) && r.analysis.length >= 2, '病历分析为多行数组：' + m.id);
-  ok(r.remedies.length === 3, '处方恰好 3 条：' + m.id);
+  ok(r.remedies.length >= 3 && r.remedies.length <= 4, '处方 3~4 条：' + m.id, '实际 ' + r.remedies.length);
   ok(r.remedies.every(x => x.t && x.d), '处方字段完整：' + m.id);
+  ok(!!r.checkup, '诊断单带复诊提醒：' + m.id);
   ok(r.copyText.includes('诊断单'), '复制文本包含标题：' + m.id);
+  ok(r.copyText.includes('复诊提醒'), '复制文本包含复诊提醒：' + m.id);
   const r2 = engine.diagnose(m.id, '', m.id + '|1');
   ok(r2.title !== r.title || r2.cause !== r.cause || r2.blessing !== r.blessing, '重掷能换出不同结果：' + m.id);
 });
@@ -97,7 +112,7 @@ moods.forEach(m => {
 const kwMood = moods.find(m => m.id === 'tired');
 const rKw = engine.diagnose(kwMood.id, '今天一直在加班', 'x');
 ok(rKw.matchedKeywords.includes('加班'), '关键词「加班」被识别');
-ok(rKw.remedies.length === 3, '命中关键词后处方仍为 3 条');
+ok(rKw.remedies.length >= 3, '命中关键词后处方不少于 3 条');
 const rKw2 = engine.diagnose(kwMood.id, '早上开会开到头晕', 'y');
 ok(rKw2.matchedKeywords.includes('开会'), '关键词「开会」被识别');
 ok(rKw2.matchedKeywords.length <= 2, '一次最多命中 2 个关键词包');
@@ -154,6 +169,29 @@ textFiles.forEach(f => {
 
 const moodsTxt = fs.readFileSync(path.join(JS, 'data-moods.js'), 'utf8');
 ok(!/[一-龥][A-Za-z_]{2,}/.test(moodsTxt.replace(/\/\*[\s\S]*?\*\//g, '')), '情绪文案无中英夹杂的病名');
+
+// v1.6.0：文案不许说教、不许承诺疗效
+const FORBIDDEN = ['你应该', '你必须', '一切都会好', '治愈', '根治', '包治', '保证不'];
+const moodsAll = [];
+moods.forEach(m => {
+  m.blessings.forEach(b => moodsAll.push({ from: '心情「' + m.name + '」', text: b }));
+});
+Object.keys(packs).forEach(k => {
+  (packs[k].blessings || []).forEach(b => moodsAll.push({ from: '关键词包「' + k + '」', text: b }));
+});
+FORBIDDEN.forEach(w => {
+  const hit = moodsAll.filter(x => String(x.text).indexOf(w) !== -1);
+  ok(hit.length === 0, '祝福不含说教/承诺词「' + w + '」', hit.length ? hit[0].from + '：' + hit[0].text : '');
+});
+
+// 祝福全库不得字面重复
+const blessingSeen = new Map();
+moodsAll.forEach(x => {
+  const key = String(x.text).replace(/[\s，。！？、,.!?]/g, '');
+  ok(!blessingSeen.has(key), '祝福不重复：' + String(x.text).slice(0, 14), blessingSeen.get(key) || '');
+  if (!blessingSeen.has(key)) blessingSeen.set(key, x.from);
+});
+ok(moodsAll.length >= 100, '全库祝福 >= 100 条', '实际 ' + moodsAll.length);
 
 /* ---------- 5. 小游戏数据与引擎 ---------- */
 section('5. 小游戏数据与引擎');
