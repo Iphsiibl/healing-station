@@ -1,9 +1,10 @@
 /* ============================================================
- * 打工人急救站 · 摸鱼游戏厅 · 像素内核
+ * 打工人急救站 · 摸鱼游戏厅 · 像素内核 v2
  * ------------------------------------------------------------
  * 设计原则：
  *  1. 零依赖：不下载任何图片、字体、音频文件，美术全部由代码画。
- *  2. 低分辨率画布（160×144 之类）+ 整数倍放大，像素边缘永远硬。
+ *  2. 中等分辨率画布（320×288）+ 整数倍放大，像素边缘永远硬。
+ *     （v1 用的是 160×144，像素太粗、细节不够，已在 v2 翻倍重画。）
  *  3. classic script（普通 <script src>），不用 ES Module，
  *     这样 file:// 双击也能跑（ES Module 会被 CORS 拦）。
  *  4. 全部 API 挂在 window.HS_GAMES 上，方便被别的页面嵌入。
@@ -12,21 +13,78 @@
   'use strict';
 
   /* ------------------------------------------------------------
-   * 调色板：奶油纸 + 柔和光晕，像素但温柔
+   * 调色板 v2：奶油纸底 + 柔和光晕，每个色系都给「亮 / 本 / 暗」三档，
+   * 这样画角色时能随手做出体积感，而不是一坨平涂。
    * ------------------------------------------------------------ */
   var PAL = {
-    ink: '#2b2438', inkSoft: '#4a4258', line: '#6b6280',
-    paper: '#f8f0e1', paper2: '#e9dcc4', paper3: '#d3bf9e',
-    white: '#fffdf7',
-    coral: '#f0837a', coralD: '#c95f5f', coralL: '#ffb3a6',
-    mint: '#8fd3b2', mintD: '#4f9c7c', mintL: '#bde8d2',
-    butter: '#f7d774', butterD: '#d9a83f', butterL: '#ffe9a8',
-    lilac: '#b9a6e3', lilacD: '#7d6cb5', lilacL: '#ded3f5',
-    sky: '#8cc7e6', skyD: '#4b87b0', water: '#3f6f96', waterL: '#6fa8cf',
-    rose: '#f2a3b8', roseD: '#c06a86',
-    brown: '#a5714c', brownD: '#7a4f34', brownL: '#c9976c',
-    gray: '#9b93a8', grayD: '#6e6680', grayL: '#c3bccc',
-    black: '#1b1826', gold: '#e8b44a'
+    /* 中性与纸 */
+    black:   '#1b1826',
+    ink:     '#2b2438',
+    inkSoft: '#4a4258',
+    line:    '#6b6280',
+    gray:    '#9b93a8',
+    grayD:   '#6e6680',
+    grayL:   '#c3bccc',
+    paper:   '#f8f0e1',
+    paper2:  '#e9dcc4',
+    paper3:  '#d3bf9e',
+    cream:   '#f5e6c8',
+    white:   '#fffdf7',
+    /* 皮肤 */
+    peach:   '#f3c9a6',
+    peachL:  '#ffe3c8',
+    peachD:  '#cf9f79',
+    /* 珊瑚红 */
+    coral:   '#f0837a',
+    coralL:  '#ffb3a6',
+    coralD:  '#c95f5f',
+    red:     '#d94f4f',
+    redD:    '#a33232',
+    /* 粉 */
+    rose:    '#f2a3b8',
+    roseL:   '#ffd0dd',
+    roseD:   '#c06a86',
+    /* 绿 */
+    mint:    '#8fd3b2',
+    mintL:   '#bde8d2',
+    mintD:   '#4f9c7c',
+    olive:   '#8a9a5b',
+    oliveD:  '#5f6d3a',
+    teal:    '#2f8f8a',
+    tealL:   '#6fd0c9',
+    tealD:   '#1d6360',
+    /* 黄 */
+    butter:  '#f7d774',
+    butterL: '#ffe9a8',
+    butterD: '#d9a83f',
+    gold:    '#e8b44a',
+    goldL:   '#f7d98a',
+    goldD:   '#b8862b',
+    /* 紫 */
+    lilac:   '#b9a6e3',
+    lilacL:  '#ded3f5',
+    lilacD:  '#7d6cb5',
+    plum:    '#7a4a6b',
+    plumL:   '#a8759a',
+    plumD:   '#523048',
+    /* 蓝 */
+    sky:     '#8cc7e6',
+    skyL:    '#bfe4f5',
+    skyD:    '#4b87b0',
+    navy:    '#3a4f7a',
+    navyL:   '#6c85b5',
+    navyD:   '#26334f',
+    water:   '#3f6f96',
+    waterL:  '#6fa8cf',
+    waterD:  '#2b4f70',
+    /* 木 */
+    brown:   '#a5714c',
+    brownL:  '#c9976c',
+    brownD:  '#7a4f34',
+    /* 金属 */
+    steel:   '#8a93a8',
+    steelL:  '#bcc3d6',
+    steelD:  '#5b6377'
   };
 
   /* ------------------------------------------------------------
@@ -133,6 +191,73 @@
   }
 
   /* ------------------------------------------------------------
+   * v2 新增：让画面「有层次」的四个小工具
+   * ------------------------------------------------------------ */
+
+  /* 竖向渐变：逐行插值，模拟墙面的受光 */
+  function gradV(ctx, x, y, w, h, c1, c2) {
+    if (h <= 0) return;
+    for (var i = 0; i < h; i++) {
+      var t = h === 1 ? 0 : i / (h - 1);
+      ctx.fillStyle = mix(c1, c2, t);
+      ctx.fillRect(x | 0, (y + i) | 0, w | 0, 1);
+    }
+  }
+
+  function gradH(ctx, x, y, w, h, c1, c2) {
+    if (w <= 0) return;
+    for (var i = 0; i < w; i++) {
+      var t = w === 1 ? 0 : i / (w - 1);
+      ctx.fillStyle = mix(c1, c2, t);
+      ctx.fillRect((x + i) | 0, y | 0, 1, h | 0);
+    }
+  }
+
+  /* 颜色插值（只处理 #rrggbb） */
+  function mix(c1, c2, t) {
+    if (t <= 0) return c1;
+    if (t >= 1) return c2;
+    var a = hex(c1), b = hex(c2);
+    return '#' + [
+      Math.round(a[0] + (b[0] - a[0]) * t),
+      Math.round(a[1] + (b[1] - a[1]) * t),
+      Math.round(a[2] + (b[2] - a[2]) * t)
+    ].map(function (v) { var s = v.toString(16); return s.length < 2 ? '0' + s : s; }).join('');
+  }
+
+  function hex(c) {
+    if (typeof c !== 'string' || c.charAt(0) !== '#') return [0, 0, 0];
+    var h = c.slice(1);
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var n = parseInt(h, 16) || 0;
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+
+  /* 斜纹阴影（dither）：像素风的「半透明」，比画一整块颜色更有质感 */
+  function dither(ctx, x, y, w, h, c, density) {
+    density = density === undefined ? 0.5 : density;
+    ctx.fillStyle = c;
+    for (var j = 0; j < h; j++) {
+      for (var i = (j & 1); i < w; i += 2) {
+        if ((i + j) % 4 === 0 || density > 0.75) ctx.fillRect((x + i) | 0, (y + j) | 0, 1, 1);
+      }
+    }
+  }
+
+  /* 浮雕：上边亮、下边暗，一眼就有厚度 */
+  function bevel(ctx, x, y, w, h, light, dark) {
+    hline(ctx, x, y, w, light);
+    vline(ctx, x, y, h, light);
+    hline(ctx, x, y + h - 1, w, dark);
+    vline(ctx, x + w - 1, y, h, dark);
+  }
+
+  /* 落地阴影（椭圆） */
+  function shadow(ctx, cx, cy, rx, ry, c) {
+    ellipse(ctx, cx, cy, rx, ry, c);
+  }
+
+  /* ------------------------------------------------------------
    * 5×7 像素字体（只做数字和大写字母，中文交给 HTML 层）
    * ------------------------------------------------------------ */
   var FONT = {
@@ -185,10 +310,12 @@
     ')': '01000/00100/00010/00010/00010/00100/01000',
     '%': '10001/10010/00100/01000/10000/00000/00000',
     '×': '00000/10001/01010/00100/01010/10001/00000',
+    "'": '00100/00100/00000/00000/00000/00000/00000',
+    '=': '00000/00000/11111/00000/11111/00000/00000',
     ' ': '00000/00000/00000/00000/00000/00000/00000'
   };
 
-  function text(ctx, str, x, y, color, scale) {
+  function text(ctx, str, x, y, color, scale, bold) {
     scale = scale || 1;
     var cx = x | 0;
     str = String(str).toUpperCase();
@@ -199,7 +326,7 @@
       for (var r = 0; r < rows.length; r++) {
         for (var c = 0; c < rows[r].length; c++) {
           if (rows[r].charAt(c) === '1') {
-            rect(ctx, cx + c * scale, y + r * scale, scale, scale, color);
+            rect(ctx, cx + c * scale, y + r * scale, scale * (bold ? 2 : 1), scale, color);
           }
         }
       }
@@ -208,9 +335,9 @@
     return cx - x;
   }
 
-  function textWidth(str, scale) {
+  function textWidth(str, scale, bold) {
     scale = scale || 1;
-    return String(str).length * 6 * scale - scale;
+    return String(str).length * 6 * scale - scale + (bold ? scale : 0);
   }
 
   /* ------------------------------------------------------------
@@ -236,7 +363,8 @@
       over:  { f: 400, to: 90,  dur: 0.45, type: 'sawtooth', vol: 0.14 },
       click: { f: 440, to: 660, dur: 0.05, type: 'square', vol: 0.10 },
       whoosh:{ f: 300, to: 900, dur: 0.12, type: 'triangle', vol: 0.10 },
-      splash:{ f: 900, to: 240, dur: 0.18, type: 'triangle', vol: 0.16 }
+      splash:{ f: 900, to: 240, dur: 0.18, type: 'triangle', vol: 0.16 },
+      bell:  { f: 1320, to: 880, dur: 0.22, type: 'triangle', vol: 0.14 }
     };
 
     function play(name) {
@@ -286,46 +414,49 @@
   }
 
   /* ------------------------------------------------------------
-   * 顶部状态条：深色底 + 分数 / 时间 / 心形
-   * 为什么要单独做：画布顶部的墙面元素（窗、挂钟）会和 HUD 文字打架，
-   * 统一用一条 12px 的深色横条当"状态栏"，所有游戏视觉就一致了。
+   * 顶部状态条 v2：320 宽的画布上，文字放大到 2 倍才看得清
    * ------------------------------------------------------------ */
   function statusBar(api, o) {
     o = o || {};
     var ctx = api.ctx, W = api.W, P = PAL;
-    /* 底板 */
+    var H = 18;
     ctx.fillStyle = P.ink;
-    ctx.fillRect(0, 0, W, 12);
+    ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = P.lilacD;
-    ctx.fillRect(0, 11, W, 1);
-    /* 分数 */
+    ctx.fillRect(0, H - 2, W, 2);
+    ctx.fillStyle = P.inkSoft;
+    ctx.fillRect(0, 0, W, 1);
+
+    var ty = 2;
     if (o.score !== undefined && o.score !== null) {
-      api.text('SCORE', 3, 3, P.paper3, 1);
+      api.text('SCORE', 6, ty, P.paper3, 2);
       var s = String(Math.floor(o.score));
-      api.text(s, 49 - api.textWidth(s, 1), 3, P.butter, 1);
+      api.text(s, 152 - api.textWidth(s, 2), ty, P.butter, 2);
     }
-    /* 时间 */
     if (o.time !== undefined && o.time !== null) {
       var t = 'TIME ' + Math.max(0, Math.ceil(o.time));
-      api.text(t, (W - api.textWidth(t, 1)) >> 1, 3, P.white, 1);
+      api.text(t, 166 + ((96 - api.textWidth(t, 2)) >> 1), ty, P.white, 2);
     }
-    /* 心形 */
     if (o.hearts !== undefined && o.hearts !== null) {
       var max = o.maxHearts || 3;
       for (var k = 0; k < max; k++) {
-        var hx = W - 7 - (max - k) * 7;
+        var hx = W - 10 - (max - k) * 12;
         var on = k < o.hearts;
         ctx.fillStyle = on ? P.coral : P.grayD;
-        ctx.fillRect(hx + 1, 3, 3, 1);
-        ctx.fillRect(hx, 4, 5, 2);
-        ctx.fillRect(hx + 1, 6, 3, 1);
-        ctx.fillRect(hx + 2, 7, 1, 1);
+        ctx.fillRect(hx + 2, ty, 4, 2);
+        ctx.fillRect(hx, ty + 2, 8, 4);
+        ctx.fillRect(hx + 1, ty + 6, 6, 2);
+        ctx.fillRect(hx + 2, ty + 8, 4, 2);
+        ctx.fillRect(hx + 3, ty + 10, 2, 2);
+        if (on) {
+          ctx.fillStyle = P.coralL;
+          ctx.fillRect(hx + 2, ty + 1, 2, 1);
+        }
       }
     }
-    /* 右上角的小字（比如 BEST），有心形时不画，免得打架 */
     if (o.best !== undefined && o.best !== null && o.hearts === undefined) {
       var b = 'BEST ' + Math.floor(o.best);
-      api.text(b, W - api.textWidth(b, 1) - 3, 3, P.paper3, 1);
+      api.text(b, W - api.textWidth(b, 2) - 8, ty, P.paper3, 2);
     }
   }
 
@@ -336,8 +467,8 @@
     opts = opts || {};
     this.canvas = canvas;
     this.def = def;
-    this.W = def.width || 160;
-    this.H = def.height || 144;
+    this.W = def.width || 320;
+    this.H = def.height || 288;
     canvas.width = this.W;
     canvas.height = this.H;
     this.ctx = canvas.getContext('2d');
@@ -407,8 +538,10 @@
       px: px, rect: rect, frame: frame, hline: hline, vline: vline,
       line: line, circle: circle, ellipse: ellipse, tri: tri,
       roundRect: roundRect, checker: checker,
-      text: function (s, x, y, c, sc) { return text(ctx, s, x, y, c, sc); },
-      textWidth: textWidth,
+      gradV: gradV, gradH: gradH, dither: dither, bevel: bevel, shadow: shadow,
+      mix: mix,
+      text: function (s, x, y, c, sc, bold) { return text(ctx, s, x, y, c, sc, bold); },
+      textWidth: function (s, sc, bold) { return textWidth(s, sc, bold); },
       statusBar: function (o) { return statusBar(self.api, o); },
       kick: function (power) { self.shake = Math.max(self.shake, power || 3); },
       puff: function (x, y, color, count) {
@@ -452,9 +585,9 @@
     var box = this.canvas.parentNode.getBoundingClientRect
       ? this.canvas.parentNode.getBoundingClientRect()
       : { width: 0, height: 0 };
-    var avail = Math.floor(box.width) || this.W * 3;
+    var avail = Math.floor(box.width) || this.W * 2;
     var scale = Math.max(1, Math.floor(avail / this.W));
-    if (scale < 2) scale = 2;
+    if (scale > 6) scale = 6;
     this.canvas.style.width = (this.W * scale) + 'px';
     this.canvas.style.height = (this.H * scale) + 'px';
     this.scale = scale;
@@ -554,7 +687,7 @@
       if (this.shake > 0) {
         this.shake = Math.max(0, this.shake - dt * 18);
         var sx = (this.rng() - 0.5) * this.shake;
-        var sy = (this.rng() - 0.5) * this.shake;
+        var sy = (self.rng() - 0.5) * this.shake;
         ctx.translate(Math.round(sx), Math.round(sy));
       }
       ctx.fillStyle = PAL.ink;
@@ -632,7 +765,8 @@
     PAL: PAL, px: px, rect: rect, frame: frame, hline: hline, vline: vline,
     line: line, circle: circle, ellipse: ellipse, tri: tri,
     roundRect: roundRect, checker: checker, text: text, textWidth: textWidth,
-    makeRng: makeRng, statusBar: statusBar
+    gradV: gradV, gradH: gradH, dither: dither, bevel: bevel, shadow: shadow,
+    mix: mix, makeRng: makeRng, statusBar: statusBar
   };
 
   if (typeof module !== 'undefined' && module.exports) {

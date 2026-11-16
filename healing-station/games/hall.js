@@ -62,10 +62,14 @@
 
     this.wrap = el('div', 'hall-canvas-wrap');
     this.canvas = el('canvas', 'hall-canvas');
-    this.canvas.width = 160;
-    this.canvas.height = 144;
+    this.canvas.width = 320;
+    this.canvas.height = 288;
     this.wrap.appendChild(this.canvas);
     this.play.appendChild(this.wrap);
+
+    /* 画布里画不了中文，中文提示交给这一行 */
+    this.msgEl = el('p', 'hall-msg', '');
+    this.play.appendChild(this.msgEl);
 
     this.howto = el('p', 'hall-howto', '');
     this.play.appendChild(this.howto);
@@ -163,8 +167,12 @@
     this.howto.textContent = def.howto || '';
     this.scoreNum.textContent = '0';
     this.bestNum.textContent = 'BEST ' + G.best(id);
+    this.msgEl.textContent = '';
 
     this.stage = G.createStage(this.canvas, id, {
+      onState: function (st) {
+        if (st && st.message) self.msgEl.textContent = st.message;
+      },
       onScore: function (score) {
         score = Math.round(score || 0);
         self.scoreNum.textContent = String(score);

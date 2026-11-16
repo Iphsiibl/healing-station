@@ -215,8 +215,8 @@ list.forEach(function (def) {
   ok(!!def.howto && def.howto.length >= 10, def.id + ' 有玩法说明');
   ok(!!def.emoji, def.id + ' 有 emoji');
   ok(!!def.accent && /^#[0-9a-fA-F]{6}$/.test(def.accent), def.id + ' 有合法主题色');
-  ok(def.width > 0 && def.height > 0 && def.width <= 240 && def.height <= 240,
-    def.id + ' 画布尺寸合理', def.width + 'x' + def.height);
+  ok(def.width >= 240 && def.height >= 216 && def.width <= 320 && def.height <= 288,
+    def.id + ' 画布尺寸合理（v2 已翻倍到 320x288）', def.width + 'x' + def.height);
 
   /* 建舞台 → 跑帧 */
   var canvas = makeCanvas();

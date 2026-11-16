@@ -446,6 +446,9 @@ if (gameCard0) {
   ok($('#gameHall .hall-play').hidden === false, '点开游戏卡片后进入舞台');
   ok($('#gameHall .hall-name').textContent.length > 1, '舞台显示游戏名：' + $('#gameHall .hall-name').textContent);
   ok($$('#gameHall .hall-canvas').length === 1, '舞台挂上了像素画布');
+  const cv = $$('#gameHall .hall-canvas')[0];
+  ok(!!cv && cv.width === 320 && cv.height === 288, '画布已翻倍到 320×288',
+    cv ? cv.width + '×' + cv.height : 'no canvas');
   ok($('#gameHall .hall-howto').textContent.length > 4, '舞台有玩法说明：' + $('#gameHall .hall-howto').textContent.slice(0, 18) + '…');
   ok($('#gameHall .hs-best').textContent.includes('BEST'), '舞台显示最高分：' + $('#gameHall .hs-best').textContent);
   const backBtn = $('#gameHall .hall-btn');

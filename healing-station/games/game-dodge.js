@@ -4,6 +4,9 @@
  * 玩法：控制摸鱼的自己（鼠标/手指跟随，或方向键），
  *       躲开从天上掉下来的「任务」，顺手接住咖啡和小铃铛。
  *       被砸中三次就露馅了。
+ *
+ * v2：画布 160×144 → 320×288，画面重画：墙上的监控眼、
+ *     地砖、盆栽、纸任务文件、咖啡杯与小铃铛都放大重画。
  * ============================================================ */
 (function (global) {
   'use strict';
@@ -12,14 +15,20 @@
   var SPR = global.HS_SPR;
   if (!G || !SPR) return;
 
-  var W = 160, H = 144;
+  var W = 320, H = 288;
+  var TOPBAR = 18;
+  var WALL_H = 94;               // 墙面高度（18~112）
+  var FLOOR_Y = TOPBAR + WALL_H; // 地面起始 = 112
+  var PS = 2;                    // 角色缩放
+  var PW = 22 * PS;              // 角色宽 44
+  var PH = 24 * PS;              // 角色高 48
 
-  var PAPER = [
-    '.1111.',
-    '122221',
-    '122221',
-    '.1111.'
-  ];
+  /* 三种掉落物的尺寸（素材尺寸 × 缩放） */
+  var ITEM = {
+    task: { w: 12 * 2, h: 15 * 2 },
+    coffee: { w: 14 * 2, h: 16 * 2 },
+    bell: { w: 12 * 2, h: 12 * 2 }
+  };
 
   G.register({
     id: 'dodge',
@@ -33,7 +42,7 @@
 
     create: function (api) {
       var P = api.PAL;
-      var player = { x: W / 2, y: H - 26, tx: W / 2, ty: H - 26, w: 10, h: 8, blink: 0 };
+      var player = { x: W / 2, y: H - PH - 6, tx: W / 2, ty: H - PH - 6, w: 30, h: 40, blink: 0, run: 0 };
       var items = [];
       var hearts = 3;
       var spawnTimer = 0.8;
@@ -42,10 +51,11 @@
       var msg = '';
       var msgTimer = 0;
       var keys = {};
+      var eyeX = W / 2, eyeY = 40;
 
-      function say(text, color) {
-        msg = text; msgTimer = 1.2;
-        api.state({ msg: text, color: color || P.ink });
+      function say(text, ascii) {
+        msg = ascii || ''; msgTimer = 1.2;
+        api.state({ message: text });
       }
 
       function spawn() {
@@ -55,10 +65,10 @@
         else if (r > 0.74) type = 'bell';
         items.push({
           type: type,
-          x: api.rand(6, W - 12),
-          y: -8,
-          vx: api.rand(-8, 8),
-          vy: type === 'task' ? api.rand(26, 38) : api.rand(18, 28),
+          x: api.rand(10, W - 30),
+          y: FLOOR_Y - 40,
+          vx: api.rand(-12, 12),
+          vy: type === 'task' ? api.rand(38, 56) : api.rand(28, 40),
           rot: 0
         });
       }
@@ -67,7 +77,7 @@
         hearts -= 1;
         api.kick(5);
         api.sfx('miss');
-        api.puff(player.x + 5, player.y + 4, P.coralD, 10);
+        api.puff(player.x + PW / 2, player.y + PH - 10, P.coralD, 12);
         player.blink = 1.2;
         if (hearts <= 0) api.end('被老板发现了三次');
       }
@@ -89,20 +99,29 @@
           if (keys['ArrowUp'] || keys['w']) kh -= 1;
           if (keys['ArrowDown'] || keys['s']) kh += 1;
           if (kv || kh) {
-            player.tx += kv * 90 * dt;
-            player.ty += kh * 90 * dt;
-            player.tx = Math.max(4, Math.min(W - 14, player.tx));
-            player.ty = Math.max(20, Math.min(H - 14, player.ty));
+            player.tx += kv * 150 * dt;
+            player.ty += kh * 150 * dt;
+            player.tx = Math.max(4, Math.min(W - PW - 4, player.tx));
+            player.ty = Math.max(FLOOR_Y + 6, Math.min(H - PH - 4, player.ty));
           }
           /* 指针跟随：平滑一点，手感更软 */
           var dx = player.tx - player.x;
           var dy = player.ty - player.y;
           var d = Math.sqrt(dx * dx + dy * dy);
-          var step = Math.min(d, 150 * dt);
+          var step = Math.min(d, 230 * dt);
           if (d > 0.5) {
             player.x += dx / d * step;
             player.y += dy / d * step;
           }
+          player.run += d * 0.05;
+
+          /* 老板的眼睛盯着你 */
+          var lx = (player.x + PW / 2) - eyeX;
+          var ly = (player.y + PH / 2) - eyeY;
+          var ld = Math.max(1, Math.sqrt(lx * lx + ly * ly));
+          eyeX += (lx / ld) * 40 * dt;
+          eyeY += (ly / ld) * 26 * dt;
+          eyeY = Math.max(30, Math.min(52, eyeY));
 
           /* 难度随时间上升 */
           var gap = 1.5 - Math.min(0.9, elapsed / 70);
@@ -114,13 +133,14 @@
 
           for (var i = items.length - 1; i >= 0; i--) {
             var it = items[i];
+            var sz = ITEM[it.type];
             it.y += it.vy * dt;
             it.x += it.vx * dt;
-            if (it.x < 2 || it.x > W - 12) it.vx = -it.vx;
-            if (it.y > H + 10) { items.splice(i, 1); continue; }
+            if (it.x < 2 || it.x > W - sz.w - 2) it.vx = -it.vx;
+            if (it.y > H + 20) { items.splice(i, 1); continue; }
 
-            var hitX = it.x < player.x + player.w && it.x + 8 > player.x;
-            var hitY = it.y < player.y + player.h && it.y + 8 > player.y;
+            var hitX = it.x < player.x + player.w && it.x + sz.w > player.x;
+            var hitY = it.y < player.y + player.h && it.y + sz.h > player.y;
             if (hitX && hitY) {
               if (it.type === 'task') {
                 if (player.blink <= 0) {
@@ -133,13 +153,13 @@
                 if (it.type === 'coffee') {
                   api.addScore(15);
                   api.sfx('coin');
-                  say('+15 咖啡续命', P.gold);
+                  say('+15 咖啡续命', '+15 COFFEE');
                 } else {
                   api.addScore(30);
                   api.sfx('level');
-                  say('+30 老板不在！', P.mintD);
+                  say('+30 老板不在！', '+30 CLEAR!');
                 }
-                api.puff(it.x + 4, it.y + 4, it.type === 'coffee' ? P.gold : P.mint, 8);
+                api.puff(it.x + sz.w / 2, it.y + sz.h / 2, it.type === 'coffee' ? P.gold : P.mint, 10);
                 items.splice(i, 1);
                 continue;
               }
@@ -155,59 +175,136 @@
         },
 
         draw: function (ctx) {
-          SPR.drawDesk(ctx, W, H, api.time(), { topbar: true, plant: false });
-          SPR.drawDust(ctx, W, H, api.time(), P.paper3);
+          var t = api.time();
+          /* 背景：墙面 */
+          SPR.drawDesk(ctx, W, H, t, {
+            topbar: true, wallH: WALL_H, window: true, clock: true,
+            poster: true, posterX: W - 112, posterY: TOPBAR + 14,
+            notes: false, shelf: false, floor: false, deskTop: H,
+            props: false, plant: false
+          });
 
-          /* 老板在顶部盯着（眼睛跟着你） */
-          var look = Math.max(-1, Math.min(1, (player.x - W / 2) / 40));
-          var bx = W / 2 - 5;
+          /* 地毯地面 */
+          ctx.fillStyle = P.grayL;
+          ctx.fillRect(0, FLOOR_Y, W, H - FLOOR_Y);
+          for (var ty = FLOOR_Y; ty < H; ty += 18) {
+            ctx.fillStyle = P.gray;
+            ctx.fillRect(0, ty, W, 1);
+          }
+          for (var tx = 0; tx <= W; tx += 32) {
+            ctx.fillStyle = P.gray;
+            ctx.fillRect(tx, FLOOR_Y, 1, H - FLOOR_Y);
+          }
+          /* 墙脚阴影 */
+          ctx.fillStyle = P.grayD;
+          ctx.fillRect(0, FLOOR_Y - 3, W, 3);
+
+          /* 地上的地毯、纸屑、椅子、垃圾桶 */
+          api.ellipse(ctx, W / 2, H - 62, 78, 26, P.rose);
+          api.ellipse(ctx, W / 2, H - 62, 70, 21, P.roseD);
+          api.ellipse(ctx, W / 2, H - 62, 62, 16, P.rose);
+          SPR.sprite(ctx, SPR.PAPER, 96, FLOOR_Y + 26, SPR.MAP.paper, 1);
+          SPR.sprite(ctx, SPR.PAPER, 206, H - 96, SPR.MAP.paper, 1);
+          /* 办公椅 */
+          ctx.fillStyle = P.steelD;
+          ctx.fillRect(272, H - 70, 4, 30);
+          ctx.fillStyle = P.paper3;
+          ctx.fillRect(258, H - 74, 34, 12);
+          ctx.fillStyle = P.gray;
+          ctx.fillRect(258, H - 64, 34, 3);
+          ctx.fillStyle = P.steelD;
+          ctx.fillRect(266, H - 58, 4, 14);
+          ctx.fillRect(282, H - 58, 4, 14);
+          ctx.fillStyle = P.steel;
+          ctx.fillRect(260, H - 46, 30, 3);
+          /* 垃圾桶 */
+          ctx.fillStyle = P.steel;
+          ctx.fillRect(22, H - 34, 22, 28);
+          ctx.fillStyle = P.steelL;
+          ctx.fillRect(22, H - 34, 22, 3);
+          ctx.fillStyle = P.steelD;
+          ctx.fillRect(19, H - 38, 28, 5);
+
+          /* 墙上的监控眼 */
+          var mx = W / 2 - 38, my = 26, mw = 76, mh = 44;
+          ctx.fillStyle = P.steelD;
+          ctx.fillRect(mx + mw / 2 - 2, my - 9, 4, 10);
+          ctx.fillStyle = P.steel;
+          ctx.fillRect(mx, my, mw, mh);
+          ctx.fillStyle = P.steelL;
+          ctx.fillRect(mx, my, mw, 2);
+          ctx.fillRect(mx, my, 2, mh);
+          ctx.fillStyle = P.steelD;
+          ctx.fillRect(mx, my + mh - 2, mw, 2);
+          ctx.fillRect(mx + mw - 2, my, 2, mh);
+          /* 镜头底座 */
           ctx.fillStyle = P.ink;
-          ctx.fillRect(bx + 1, 14, 9, 9);
-          ctx.fillStyle = '#f3c9a6';
-          ctx.fillRect(bx + 2, 15, 7, 7);
+          ctx.fillRect(mx + mw / 2 - 4, my + mh, 8, 4);
+          /* 眼球 */
+          var ecx = W / 2, ecy = my + mh / 2;
+          api.ellipse(ctx, ecx, ecy + 3, 17, 15, P.paper3);
+          api.ellipse(ctx, ecx, ecy, 17, 17, P.white);
+          api.ellipse(ctx, Math.round(eyeX), Math.round(eyeY), 8, 8, P.ink);
+          ctx.fillStyle = P.white;
+          ctx.fillRect(Math.round(eyeX) - 4, Math.round(eyeY) - 4, 4, 4);
+          /* 上下眼皮 */
           ctx.fillStyle = P.ink;
-          ctx.fillRect(bx + 3 + Math.round(look * 2), 17, 2, 2);
-          ctx.fillRect(bx + 6 + Math.round(look * 2), 17, 2, 2);
-          ctx.fillStyle = P.coralD;
-          ctx.fillRect(bx + 3 + Math.round(look * 2), 19, 3, 1);
+          ctx.fillRect(ecx - 17, ecy - 18, 34, 3);
+          ctx.fillRect(ecx - 17, ecy + 15, 34, 3);
+          /* 录像指示灯 */
+          ctx.fillStyle = hearts > 1 ? P.coral : P.red;
+          ctx.fillRect(mx + 8, my + 6, 6, 5);
+
+          /* 地上的盆栽 */
+          SPR.sprite(ctx, SPR.PLANT, 56, H - 40, SPR.MAP.plant, 2);
 
           /* 掉落物 */
           for (var i = 0; i < items.length; i++) {
             var it = items[i];
-            var ix = it.x | 0, iy = it.y | 0;
+            var ix = Math.round(it.x), iy = Math.round(it.y);
             if (it.type === 'task') {
-              SPR.sprite(ctx, PAPER, ix, iy, { '1': P.paper3, '2': P.white }, 1);
-              ctx.fillStyle = P.inkSoft;
-              ctx.fillRect(ix + 2, iy + 2, 4, 1);
+              SPR.sprite(ctx, SPR.PAPER, ix, iy, SPR.MAP.paper, 2);
+              /* 纸上的一道横线 */
+              ctx.fillStyle = P.gray;
+              ctx.fillRect(ix + 6, iy + 8, 14, 2);
+              ctx.fillRect(ix + 6, iy + 14, 10, 2);
             } else if (it.type === 'coffee') {
-              SPR.sprite(ctx, SPR.CUP, ix, iy, SPR.MAP.cup, 1);
+              SPR.sprite(ctx, SPR.CUP, ix, iy, SPR.MAP.cup, 2);
             } else {
-              ctx.fillStyle = P.mint;
-              ctx.fillRect(ix + 2, iy, 4, 6);
-              ctx.fillStyle = P.mintD;
-              ctx.fillRect(ix + 3, iy + 2, 2, 2);
+              SPR.sprite(ctx, SPR.BELL, ix, iy, SPR.MAP.bell, 2);
             }
           }
 
-          /* 玩家 */
+          /* 玩家（脚下带影子） */
+          var px = Math.round(player.x), py = Math.round(player.y);
+          ctx.fillStyle = P.grayD;
+          ctx.globalAlpha = 0.35;
+          ctx.fillRect(px + 6, py + PH - 4, 32, 5);
+          ctx.globalAlpha = 1;
           if (player.blink <= 0 || Math.floor(api.time() * 12) % 2 === 0) {
-            SPR.sprite(ctx, SPR.WORKER, player.x | 0, player.y | 0, SPR.MAP.worker, 1);
+            SPR.sprite(ctx, SPR.WORKER, px, py, SPR.MAP.worker, PS);
           }
+
+          SPR.drawDust(ctx, W, H, t, P.paper3);
 
           /* HUD（顶部状态条） */
           api.statusBar({ score: api.getScore(), time: 60 - elapsed, hearts: hearts, maxHearts: 3 });
+
+          /* 提示条（ASCII；中文走 HTML 层） */
           if (msgTimer > 0) {
-            var w = api.textWidth(msg, 1) + 8;
+            var w = api.textWidth(msg, 2) + 16;
             ctx.fillStyle = P.white;
-            ctx.fillRect((W - w) >> 1, H - 14, w, 11);
-            api.text(msg, (W - api.textWidth(msg, 1)) >> 1, H - 11, P.ink, 1);
+            ctx.fillRect((W - w) >> 1, H - 36, w, 22);
+            ctx.fillStyle = P.paper3;
+            ctx.fillRect((W - w) >> 1, H - 15, w, 1);
+            api.text(msg, (W - api.textWidth(msg, 2)) >> 1, H - 31, P.ink, 2);
           }
         },
 
         pointer: function (type, x, y) {
           if (type === 'move' || type === 'down') {
-            player.tx = x - 5;
-            player.ty = y - 4;
+            player.tx = x - PW / 2;
+            player.ty = y - PH / 2;
           }
         },
 

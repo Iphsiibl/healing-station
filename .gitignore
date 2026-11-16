@@ -17,3 +17,5 @@ desktop.ini
 .shot-*.png
 .diag.html
 .seed.html
+healing-station/.shots/
+healing-station/versions/*/.shots/
