@@ -141,12 +141,35 @@
         <button class="btn ghost" type="button" id="soundStop">⏹ 停止播放</button>
         <button class="btn primary" type="button" id="bossKey">🕵 老板键（Esc）</button>
       </div>
-      <p class="tip">小技巧：随时按 <b>Esc</b>（或点右上角的「老板键」），整站会立刻变成一份正在进行的「Q3 业务复盘」。</p>
+      <p class="tip">小技巧：随时按 <b>Esc</b>（或点下面的「老板键」），整站会立刻变成一份看起来很忙的文档。</p>
+
+      <h3 class="sub-title">老板键 · 挑一份伪装页</h3>
+      <div class="boss-picker" id="bossPicker" role="group" aria-label="选择伪装页"></div>
+      <p class="tip">选好之后按 <b>Esc</b>，整站会变成下面这份文档。表格和数字全是编的，但看起来非常忙。</p>
+    </div>
+
+    <div class="card breath-card">
+      <h2 class="card-title">呼吸急救 · 3 分钟能做完</h2>
+      <p class="card-hint">心跳快、手抖、脑子一片空白的时候，跟着圆圈呼吸就行。它不治病，只帮你把气匀回来。</p>
+      <div class="breath-picker" id="breathPicker" role="group" aria-label="选择呼吸练习"></div>
+      <div class="breath-stage">
+        <div class="breath-circle" id="breathCircle" aria-hidden="true"><span id="breathCount">·</span></div>
+        <div class="breath-info">
+          <p class="breath-name" id="breathName">箱式呼吸</p>
+          <p class="breath-phase" id="breathPhase" role="status" aria-live="polite">准备好了就点「开始呼吸」</p>
+          <p class="breath-tip" id="breathTip"></p>
+          <p class="breath-when" id="breathWhen"></p>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" type="button" id="breathStart">▶ 开始呼吸</button>
+        <button class="btn ghost" type="button" id="breathStop">⏹ 停下</button>
+      </div>
     </div>
 
     <div class="card pomo-card">
       <h2 class="card-title">番茄钟 · 假装专注</h2>
-      <p class="card-hint">25 分钟专注，5 分钟休息。到点有提示音。</p>
+      <p class="card-hint">25 分钟专注，5 分钟休息；赶工的时候也可以切 15 分钟。到点有提示音。</p>
       <div class="pomo">
         <svg class="pomo-ring" viewBox="0 0 120 120" aria-hidden="true">
           <circle class="pomo-track" cx="60" cy="60" r="52"></circle>
@@ -160,7 +183,7 @@
       <div class="btn-row">
         <button class="btn primary" type="button" id="pomoStart">▶ 开始</button>
         <button class="btn ghost" type="button" id="pomoReset">↺ 重置</button>
-        <button class="btn ghost" type="button" id="pomoModeBtn">🔄 切换 25 / 5 分钟</button>
+        <button class="btn ghost" type="button" id="pomoModeBtn">🔄 切换 25 / 5 / 15 分钟</button>
       </div>
     </div>
   </section>
@@ -251,30 +274,22 @@
     <span class="gh-dot">·</span>
     <a class="gh-link" href="https://iphsiibl.github.io/healing-station/" target="_blank" rel="noopener noreferrer">🌐 在线体验</a>
   </p>
-  <p class="version">v1.7.0 · 数据只存在你自己的浏览器里，不上传</p>
+  <p class="version">v1.8.0 · 数据只存在你自己的浏览器里，不上传</p>
 </footer>
 
 <div class="boss-screen" id="bossScreen" role="dialog" aria-modal="true" aria-label="正在开会" tabindex="-1" hidden>
   <div class="boss-doc">
     <div class="boss-doc-head">
-      <h2>Q3 业务复盘 &amp; 下阶段目标对齐</h2>
-      <span class="boss-tag">内部资料 · 请勿外传</span>
+      <h2 id="bossDocTitle">Q3 业务复盘 &amp; 下阶段目标对齐</h2>
+      <span class="boss-tag" id="bossDocTag">内部资料 · 请勿外传</span>
     </div>
     <table class="boss-table">
       <thead>
-        <tr><th>指标</th><th>本季度</th><th>目标</th><th>状态</th></tr>
+        <tr id="bossDocHead"></tr>
       </thead>
-      <tbody>
-        <tr><td>活跃用户</td><td>128,400</td><td>130,000</td><td>98.8%</td></tr>
-        <tr><td>人均时长</td><td>27.4 分钟</td><td>30 分钟</td><td>91.3%</td></tr>
-        <tr><td>下季度核心目标</td><td colspan="3">把新用户首周留存从 42% 提升到 55%</td></tr>
-      </tbody>
+      <tbody id="bossDocBody"></tbody>
     </table>
-    <ul class="boss-list">
-      <li>① 数据口径已与增长组对齐，待最终确认</li>
-      <li>② 埋点方案本周五前补充完整</li>
-      <li>③ 下阶段重点：留存 &gt; 拉新</li>
-    </ul>
+    <ul class="boss-list" id="bossDocList"></ul>
     <p class="boss-hint">点击任意处返回 · 或按 Esc</p>
   </div>
 </div>
@@ -282,6 +297,8 @@
 <script src="assets/js/data-moods.js"></script>
 <script src="assets/js/data-scenes.js"></script>
 <script src="assets/js/data-story.js"></script>
+<script src="assets/js/data-breath.js"></script>
+<script src="assets/js/data-boss.js"></script>
 <script src="assets/js/engine.js"></script>
 <script src="assets/js/audio.js"></script>
 <script src="games/pixel.js"></script>

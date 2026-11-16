@@ -246,6 +246,140 @@
         timers.push(t);
       })();
       return { nodes: [src], timers: timers };
+    },
+
+    /* 雷雨：低频闷响 + 偶发雷声滚过 */
+    thunder: function (c, out) {
+      var src = noiseSource(c, 'brown', 6);
+      var lp = filter(c, 'lowpass', 260, 0.85);
+      var g = gainNode(c, 0.3);
+      src.connect(lp); lp.connect(g); g.connect(out);
+      var lfoOsc = lfo(c, 0.11, 0.14, g.gain, 0.3);
+      src.start();
+      var timers = [];
+      (function rumble() {
+        var t = setTimeout(function () {
+          if (!current || current.id !== 'thunder') return;
+          try {
+            var n = c.createBufferSource();
+            n.buffer = noiseBuffer(c, 2.2, 'brown');
+            var nlp = filter(c, 'lowpass', 180, 0.9);
+            var ng = gainNode(c, 0.0001);
+            var t0 = c.currentTime;
+            ng.gain.setValueAtTime(0.0001, t0);
+            ng.gain.exponentialRampToValueAtTime(0.42, t0 + 0.18);
+            ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.1);
+            n.connect(nlp); nlp.connect(ng); ng.connect(out);
+            n.start(t0); n.stop(t0 + 2.2);
+          } catch (e) { /* 忽略 */ }
+          rumble();
+        }, 7000 + Math.random() * 9000);
+        timers.push(t);
+      })();
+      return { nodes: [src, lfoOsc], timers: timers };
+    },
+
+    /* 林风：穿过树梢的风 + 偶尔一声鸟 */
+    forest: function (c, out) {
+      var src = noiseSource(c, 'pink', 6);
+      var bp = filter(c, 'bandpass', 980, 0.45);
+      var g = gainNode(c, 0.2);
+      src.connect(bp); bp.connect(g); g.connect(out);
+      var lfoOsc = lfo(c, 0.08, 0.13, g.gain, 0.2);
+      var src2 = noiseSource(c, 'white', 6);
+      var hp2 = filter(c, 'highpass', 2400, 0.7);
+      var g2 = gainNode(c, 0.05);
+      src2.connect(hp2); hp2.connect(g2); g2.connect(out);
+      src.start(); src2.start();
+      var timers = [];
+      (function bird() {
+        var t = setTimeout(function () {
+          if (!current || current.id !== 'forest') return;
+          try {
+            var o = c.createOscillator();
+            var og = gainNode(c, 0.0001);
+            o.type = 'sine';
+            var t0 = c.currentTime;
+            o.frequency.setValueAtTime(2100 + Math.random() * 500, t0);
+            o.frequency.exponentialRampToValueAtTime(2900 + Math.random() * 500, t0 + 0.08);
+            o.frequency.exponentialRampToValueAtTime(1900, t0 + 0.2);
+            og.gain.setValueAtTime(0.0001, t0);
+            og.gain.exponentialRampToValueAtTime(0.07, t0 + 0.03);
+            og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.24);
+            o.connect(og); og.connect(out);
+            o.start(t0); o.stop(t0 + 0.3);
+          } catch (e) { /* 忽略 */ }
+          bird();
+        }, 9000 + Math.random() * 12000);
+        timers.push(t);
+      })();
+      return { nodes: [src, src2, lfoOsc], timers: timers };
+    },
+
+    /* 列车：车轨的轰鸣 + 有节奏的咔哒 */
+    train: function (c, out) {
+      var src = noiseSource(c, 'brown', 6);
+      var lp = filter(c, 'lowpass', 300, 0.85);
+      var g = gainNode(c, 0.28);
+      src.connect(lp); lp.connect(g); g.connect(out);
+      var hum = c.createOscillator();
+      hum.type = 'sawtooth';
+      hum.frequency.value = 58;
+      var hlp = filter(c, 'lowpass', 120, 1);
+      var hg = gainNode(c, 0.05);
+      hum.connect(hlp); hlp.connect(hg); hg.connect(out);
+      hum.start();
+      var timers = [];
+      (function clack() {
+        var t = setTimeout(function () {
+          if (!current || current.id !== 'train') return;
+          try {
+            var n = c.createBufferSource();
+            n.buffer = noiseBuffer(c, 0.12, 'white');
+            var nbp = filter(c, 'bandpass', 1400, 1.4);
+            var ng = gainNode(c, 0.0001);
+            var t0 = c.currentTime;
+            ng.gain.setValueAtTime(0.0001, t0);
+            ng.gain.exponentialRampToValueAtTime(0.12, t0 + 0.012);
+            ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+            n.connect(nbp); nbp.connect(ng); ng.connect(out);
+            n.start(t0); n.stop(t0 + 0.14);
+          } catch (e) { /* 忽略 */ }
+          clack();
+        }, 900 + Math.random() * 400);
+        timers.push(t);
+      })();
+      return { nodes: [src, hum], timers: timers };
+    },
+
+    /* 打字机：你在假装认真敲字 */
+    typing: function (c, out) {
+      var src = noiseSource(c, 'pink', 4);
+      var lp = filter(c, 'lowpass', 900, 0.7);
+      var g = gainNode(c, 0.04);
+      src.connect(lp); lp.connect(g); g.connect(out);
+      src.start();
+      var timers = [];
+      (function key() {
+        var t = setTimeout(function () {
+          if (!current || current.id !== 'typing') return;
+          try {
+            var n = c.createBufferSource();
+            n.buffer = noiseBuffer(c, 0.05, 'white');
+            var nbp = filter(c, 'bandpass', 2600, 1.6);
+            var ng = gainNode(c, 0.0001);
+            var t0 = c.currentTime;
+            ng.gain.setValueAtTime(0.0001, t0);
+            ng.gain.exponentialRampToValueAtTime(0.16, t0 + 0.006);
+            ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
+            n.connect(nbp); nbp.connect(ng); ng.connect(out);
+            n.start(t0); n.stop(t0 + 0.06);
+          } catch (e) { /* 忽略 */ }
+          key();
+        }, 70 + Math.random() * 260);
+        timers.push(t);
+      })();
+      return { nodes: [src], timers: timers };
     }
   };
 
@@ -255,7 +389,11 @@
     { id: 'subway', name: '末班地铁', emoji: '🚇', desc: '适合假装在通勤' },
     { id: 'aircon', name: '办公室的空调', emoji: '❄️', desc: '适合假装在加班' },
     { id: 'waves', name: '海边的浪', emoji: '🌊', desc: '适合假装在度假' },
-    { id: 'pages', name: '翻书的声音', emoji: '📖', desc: '适合假装在学习' }
+    { id: 'pages', name: '翻书的声音', emoji: '📖', desc: '适合假装在学习' },
+    { id: 'thunder', name: '窗外的雷雨', emoji: '⛈️', desc: '适合假装在思考大事' },
+    { id: 'forest', name: '楼下的树林', emoji: '🌲', desc: '适合假装在散步' },
+    { id: 'train', name: '开往郊区的列车', emoji: '🚆', desc: '适合假装在出差' },
+    { id: 'typing', name: '有人在敲键盘', emoji: '⌨️', desc: '适合假装在加班' }
   ];
 
   /* ---------- 控制 ---------- */

@@ -356,6 +356,8 @@ function loadApp() {
   runScript('data-moods.js');
   runScript('data-scenes.js');
   runScript('data-story.js');
+  runScript('data-breath.js');
+  runScript('data-boss.js');
   runScript('engine.js');
   runScript('audio.js');
   runGames();
@@ -479,7 +481,7 @@ ok($('#panel-report').hidden === false, '切换到疗愈周报面板');
 tabs[0].click();
 
 /* 摸鱼补给站：背景音（用 Mock AudioContext 跑通真实播放链路） */
-ok($$('.sound-btn').length === 6, '背景音按钮渲染 6 个', String($$('.sound-btn').length));
+ok($$('.sound-btn').length === 10, '背景音按钮渲染 10 个', String($$('.sound-btn').length));
 ok($('#soundGrid').textContent.includes('窗外在下雨'), '背景音文案已注入');
 ok(!!sandbox.HS_AUDIO && sandbox.HS_AUDIO.supported() === true, '合成音频在测试环境中可用');
 const soundBtns = $$('.sound-btn');
@@ -509,12 +511,32 @@ ok($('#pomoTime').textContent === '25:00', '番茄钟初始显示 25:00', $('#po
 $('#pomoModeBtn').click();
 ok($('#pomoTime').textContent === '05:00', '切换到休息模式显示 05:00', $('#pomoTime').textContent);
 $('#pomoModeBtn').click();
+ok($('#pomoTime').textContent === '15:00', '切换到赶工模式显示 15:00', $('#pomoTime').textContent);
+$('#pomoModeBtn').click();
 ok($('#pomoTime').textContent === '25:00', '切回专注模式');
 $('#pomoReset').click();
 ok($('#pomoTime').textContent === '25:00', '重置番茄钟');
 
+/* 呼吸急救（v1.8.0） */
+ok($$('.breath-btn').length === 3, '呼吸引导按钮渲染 3 个', String($$('.breath-btn').length));
+ok($('#breathName').textContent.includes('箱式呼吸'), '默认选中第一套呼吸练习', $('#breathName').textContent);
+$$('.breath-btn')[1].click();
+ok($('#breathName').textContent.includes('4-7-8'), '可以切换到 4-7-8 呼吸', $('#breathName').textContent);
+ok($$('.breath-btn')[1].classList.contains('is-selected'), '选中的呼吸按钮高亮');
+ok($('#breathWhen').textContent.length > 4, '呼吸显示适用场景', $('#breathWhen').textContent);
+$('#breathStart').click();
+ok($('#breathPhase').textContent.includes('秒'), '开始呼吸后显示阶段与倒计时', $('#breathPhase').textContent);
+ok($('#breathCount').textContent !== '', '呼吸圆圈显示倒计时数字', $('#breathCount').textContent);
+$('#breathStop').click();
+ok($('#breathPhase').textContent.includes('停下'), '可以中途停下呼吸', $('#breathPhase').textContent);
+
 /* 老板键 */
 ok($('#bossScreen').hidden === true, '老板键初始隐藏');
+ok($$('.boss-chip').length === 4, '伪装页选择按钮渲染 4 个', String($$('.boss-chip').length));
+ok($('#bossDocTitle').textContent.includes('复盘'), '默认伪装页是业务复盘表', $('#bossDocTitle').textContent);
+$$('.boss-chip')[1].click();
+ok($('#bossDocTitle').textContent.includes('需求评审'), '可以切换到需求评审文档', $('#bossDocTitle').textContent);
+ok($('#bossDocBody').children.length >= 3, '伪装文档渲染了表格行', String($('#bossDocBody').children.length));
 $('#bossKey').click();
 ok($('#bossScreen').hidden === false, '点击老板键弹出伪装界面');
 $('#bossScreen').click();
@@ -549,7 +571,7 @@ tabs[5].click();
 ok($('#panel-report').hidden === false, '周报面板可见');
 ok($('#reportEmpty').hidden === true, '有数据时不显示空状态');
 ok($('#reportSummary').textContent.includes('被哄了'), '周报小结已生成：' + $('#reportSummary').textContent.slice(0, 22) + '…');
-ok($$('#reportStats .report-stat').length === 6, '统计小卡 6 个', String($$('#reportStats .report-stat').length));
+ok($$('#reportStats .report-stat').length === 7, '统计小卡 7 个', String($$('#reportStats .report-stat').length));
 ok($$('#reportChart .report-col').length === 7, '近 7 天柱状图 7 列', String($$('#reportChart .report-col').length));
 ok($$('#reportTags .report-tag').length >= 1, '高频关键词标签已生成');
 $('#reportCopy').click();
@@ -596,7 +618,7 @@ try {
   ok(false, '深链场景脚本加载无异常', e && e.message);
 }
 ok($('#panel-fish').hidden === false, '深链 #tab=fish 直接打开摸鱼补给站');
-ok($$('.sound-btn').length === 6, '深链场景背景音按钮渲染 6 个');
+ok($$('.sound-btn').length === 10, '深链场景背景音按钮渲染 10 个');
 
 /* 深链：#tab=report 直达疗愈周报 */
 boot('#tab=report', seed);
@@ -607,7 +629,7 @@ try {
 }
 ok($('#panel-report').hidden === false, '深链 #tab=report 直接打开疗愈周报面板');
 ok($('#reportEmpty').hidden === true, '深链场景下沿用历史记录，周报有数据');
-ok($$('#reportStats .report-stat').length === 6, '深链场景统计小卡 6 个');
+ok($$('#reportStats .report-stat').length === 7, '深链场景统计小卡 7 个');
 
 /* 记忆上次心情：带着旧记录重新进入 */
 boot('', seed);

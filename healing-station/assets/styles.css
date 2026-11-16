@@ -396,6 +396,63 @@ html[data-theme="night"] .usage-note .result-sub { color: var(--coral); }
 }
 .sound-status:empty { display: none; }
 
+/* ---------- 摸鱼补给站：伪装页选择 ---------- */
+.sub-title {
+  margin: 1.4rem 0 .6rem; font-size: .95rem; font-weight: 700; color: var(--ink);
+}
+.boss-picker { display: flex; flex-wrap: wrap; gap: .55rem; margin-bottom: .6rem; }
+.boss-chip {
+  font: inherit; cursor: pointer;
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .45rem .8rem; border-radius: 999px;
+  background: var(--cream-2); border: 1px solid var(--line); color: var(--ink);
+  font-size: .86rem;
+  transition: transform var(--speed), border-color var(--speed), background var(--speed), color var(--speed);
+}
+.boss-chip:hover { transform: translateY(-2px); }
+.boss-chip.is-selected {
+  border-color: var(--lilac); background: var(--lilac-soft); color: var(--ink);
+  box-shadow: 0 4px 14px rgba(138, 122, 200, .18);
+}
+.boss-chip-emoji { font-size: 1rem; line-height: 1; }
+.boss-chip-name { white-space: nowrap; }
+
+/* ---------- 摸鱼补给站：呼吸急救 ---------- */
+.breath-card { margin-top: 1.1rem; }
+.breath-picker { display: flex; flex-wrap: wrap; gap: .55rem; margin-bottom: 1.1rem; }
+.breath-btn {
+  font: inherit; cursor: pointer; text-align: left;
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .5rem .9rem; border-radius: var(--radius-sm);
+  background: var(--cream-2); border: 1px solid var(--line); color: var(--ink);
+  transition: transform var(--speed), border-color var(--speed), background var(--speed);
+}
+.breath-btn:hover { transform: translateY(-2px); }
+.breath-btn.is-selected {
+  border-color: var(--mint); background: var(--mint-soft);
+  box-shadow: 0 5px 16px rgba(63, 191, 173, .18);
+}
+.breath-emoji { font-size: 1.15rem; line-height: 1; }
+.breath-text { display: flex; flex-direction: column; line-height: 1.25; }
+.breath-btn-name { font-weight: 600; font-size: .9rem; }
+.breath-btn-min { color: var(--ink-soft); font-size: .76rem; }
+.breath-stage { display: flex; gap: 1.1rem; align-items: center; margin-bottom: 1rem; }
+.breath-circle {
+  width: 118px; height: 118px; flex: 0 0 118px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.7rem; font-weight: 700; color: var(--ink);
+  background: radial-gradient(circle at 34% 30%, var(--paper), var(--mint-soft) 70%);
+  border: 2px solid var(--mint);
+  box-shadow: 0 8px 22px rgba(63, 191, 173, .22);
+  transform: scale(.72);
+  transition: transform 1s ease-in-out;
+}
+.breath-info { min-width: 0; }
+.breath-name { margin: 0 0 .25rem; font-weight: 700; }
+.breath-phase { margin: 0 0 .3rem; color: var(--mint); font-size: 1rem; font-weight: 600; }
+.breath-tip { margin: 0 0 .3rem; color: var(--ink-soft); font-size: .88rem; line-height: 1.5; }
+.breath-when { margin: 0; color: var(--ink-soft); font-size: .82rem; line-height: 1.5; }
+
 input[type="range"] {
   width: 100%; height: 1.6rem;
   -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer;
@@ -576,4 +633,8 @@ input[type="range"]:focus-visible { outline: 2px solid var(--coral); outline-off
   .report-chart { height: 112px; gap: .25rem; }
   .report-stat { padding: .55rem .25rem; }
   .report-stat-num { font-size: 1.2rem; }
+  .breath-stage { flex-direction: column; align-items: flex-start; gap: .8rem; }
+  .breath-circle { width: 96px; height: 96px; flex: 0 0 96px; }
+  .boss-picker, .breath-picker { gap: .4rem; }
+  .boss-chip, .breath-btn { padding: .4rem .65rem; font-size: .82rem; }
 }

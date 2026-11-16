@@ -597,18 +597,18 @@ function auditFish() {
       voiceImpl.indexOf(s.id) === -1 ? '❌ 无实现' : '✅']);
   });
 
-  // 番茄钟档位：从 app.js 里读
+  // 番茄钟档位：从 app.js 的 POMO_MODES 里读
   var appCode = fs.readFileSync(path.join(JS_DIR, 'app.js'), 'utf8');
   var html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  var pomoFn = /function\s+pomoTotal\s*\(\)\s*\{([\s\S]*?)\n\s*\}/.exec(appCode);
   var minutes = [];
-  if (pomoFn) {
-    var re2 = /(\d+)\s*\*\s*60\s*\*\s*1000/g;
+  var modesRe = /var\s+POMO_MODES\s*=\s*\[([\s\S]*?)\];/.exec(appCode);
+  if (modesRe) {
+    var re2 = /minutes:\s*(\d+)/g;
     var mm;
-    while ((mm = re2.exec(pomoFn[1])) !== null) minutes.push(Number(mm[1]));
+    while ((mm = re2.exec(modesRe[1])) !== null) minutes.push(Number(mm[1]));
   }
   if (minutes.length >= 2) {
-    pass(mod, '番茄钟档位', minutes[0] + '/' + minutes[1] + ' 分钟（专注/休息）',
+    pass(mod, '番茄钟档位', minutes.join('/') + ' 分钟（专注/休息/赶工）',
       '共 ' + minutes.length + ' 档');
     var htmlMin = [];
     var re3 = /(\d+)\s*分钟/g;
@@ -622,20 +622,63 @@ function auditFish() {
       pass(mod, '番茄钟档位与页面文案一致', '页面与代码一致');
     }
   } else {
-    warn(mod, '番茄钟档位', '未能解析', '没找到 pomoTotal 的分钟档位');
+    warn(mod, '番茄钟档位', '未能解析', '没找到 POMO_MODES 的分钟档位');
   }
 
-  // 伪装页（老板键）数量
-  var fakePages = (html.match(/class="boss-screen"/g) || []).length;
-  if (fakePages === 1) {
-    pass(mod, '伪装页数量', fakePages + ' 个（老板键「Q3 业务复盘」）');
+  // 伪装页（老板键）：从 data-boss.js 读
+  var bossPages = [];
+  try {
+    bossPages = (require(path.join(JS_DIR, 'data-boss.js')).pages) || [];
+  } catch (e) { /* 忽略 */ }
+  if (bossPages.length >= 4) {
+    pass(mod, '伪装页数量', bossPages.length + ' 个（' + bossPages.map(function (p) { return p.name; }).join('/') + '）');
   } else {
-    warn(mod, '伪装页数量', fakePages + ' 个', '预期 1 个老板键伪装页');
+    warn(mod, '伪装页数量', bossPages.length + ' 个', '预期 >= 4 个老板键伪装页');
   }
+  bossPages.forEach(function (pg) {
+    var missing = ['id', 'name', 'emoji', 'title', 'tag'].filter(function (f) { return !pg[f]; });
+    if (missing.length) {
+      fail(mod, '伪装页「' + (pg.id || '?') + '」元信息完整', '缺 ' + missing.join('/'), '伪装页需要 id/name/emoji/title/tag');
+    } else {
+      pass(mod, '伪装页「' + pg.name + '」元信息完整', 'id/name/emoji/title/tag 齐全');
+    }
+    var hasTable = pg.table && Array.isArray(pg.table.head) && pg.table.rows && pg.table.rows.length;
+    var hasList = Array.isArray(pg.list) && pg.list.length;
+    if (!hasTable && !hasList) {
+      fail(mod, '伪装页「' + (pg.name || pg.id) + '」有内容', '既没有表格也没有清单', '伪装页看起来太空，容易露馅');
+    } else {
+      pass(mod, '伪装页「' + (pg.name || pg.id) + '」有内容', hasTable ? '表格 ' + pg.table.rows.length + ' 行' : '清单 ' + pg.list.length + ' 条');
+    }
+  });
 
-  mod.entries = sounds.length;
+  // 呼吸引导（v1.8.0）：从 data-breath.js 读
+  var exercises = [];
+  try {
+    exercises = (require(path.join(JS_DIR, 'data-breath.js')).exercises) || [];
+  } catch (e) { /* 忽略 */ }
+  if (exercises.length >= 3) {
+    pass(mod, '呼吸引导数量', exercises.length + ' 套（' + exercises.map(function (e) { return e.name; }).join('/') + '）');
+  } else {
+    warn(mod, '呼吸引导数量', exercises.length + ' 套', '预期 >= 3 套呼吸练习');
+  }
+  exercises.forEach(function (ex) {
+    var missing = ['id', 'name', 'emoji', 'when', 'desc', 'finish'].filter(function (f) { return !ex[f]; });
+    if (missing.length) {
+      fail(mod, '呼吸「' + (ex.id || '?') + '」字段完整', '缺 ' + missing.join('/'), '呼吸练习需要 id/name/emoji/when/desc/finish');
+    } else {
+      pass(mod, '呼吸「' + ex.name + '」字段完整', 'id/name/emoji/when/desc/finish 齐全');
+    }
+    if (!Array.isArray(ex.phases) || ex.phases.length < 2) {
+      fail(mod, '呼吸「' + (ex.name || ex.id) + '」有阶段', '阶段少于 2 个', '呼吸练习至少要有吸与呼');
+    } else {
+      pass(mod, '呼吸「' + ex.name + '」有阶段', ex.phases.map(function (p) { return p.label + p.sec + '秒'; }).join(' / '));
+    }
+  });
+
+  mod.entries = sounds.length + exercises.length + bossPages.length;
   mod.detail = '音色 ' + sounds.length + ' · 合成实现 ' + voiceImpl.length +
-    ' · 番茄钟 ' + minutes.join('/') + ' 分钟 · 伪装页 ' + fakePages + ' 个';
+    ' · 番茄钟 ' + minutes.join('/') + ' 分钟 · 伪装页 ' + bossPages.length + ' 个' +
+    ' · 呼吸 ' + exercises.length + ' 套';
   addTable(mod, '音色明细', ['id', '名称', 'emoji', '说明', '实现'], rows);
   return mod;
 }

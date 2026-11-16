@@ -358,15 +358,230 @@
     toast(AUDIO.currentId() ? '正在播放：' + soundName(AUDIO.currentId()) + ' 🎧' : '安静一下，也很好 🌙');
   }
 
+  /* ---------- 呼吸急救（v1.8.0 新增） ---------- */
+  var breath = { id: '', plan: null, timer: null, left: 0, phase: 0, phaseLeft: 0, cycle: 0, done: 0 };
+
+  function renderBreathPicker() {
+    var box = $('#breathPicker');
+    if (!box) return;
+    var list = E.breathExercises();
+    if (!list.length) return;
+    if (!breath.id) breath.id = list[0].id;
+    box.innerHTML = '';
+    list.forEach(function (ex) {
+      var b = el('button', 'breath-btn');
+      b.type = 'button';
+      b.dataset.breath = ex.id;
+      b.appendChild(el('span', 'breath-emoji', ex.emoji || '🫧'));
+      var t = el('span', 'breath-text');
+      t.appendChild(el('span', 'breath-btn-name', ex.name || ''));
+      t.appendChild(el('span', 'breath-btn-min', (ex.minutes || 1) + ' 分钟'));
+      b.appendChild(t);
+      b.addEventListener('click', function () { selectBreath(ex.id); });
+      box.appendChild(b);
+    });
+    syncBreathPicker();
+  }
+
+  function syncBreathPicker() {
+    $$('.breath-btn').forEach(function (b) {
+      var on = b.dataset.breath === breath.id;
+      b.classList.toggle('is-selected', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  function selectBreath(id) {
+    breathStop(true);
+    breath.id = id;
+    breath.plan = E.breathPlan(id);
+    syncBreathPicker();
+    renderBreathInfo();
+  }
+
+  function renderBreathInfo() {
+    var plan = breath.plan || E.breathPlan(breath.id);
+    if (!plan) return;
+    var nameEl = $('#breathName');
+    if (nameEl) nameEl.textContent = (plan.emoji || '') + ' ' + plan.name;
+    var whenEl = $('#breathWhen');
+    if (whenEl) whenEl.textContent = plan.when ? '适合：' + plan.when : '';
+    var tipEl = $('#breathTip');
+    var phaseEl = $('#breathPhase');
+    var countEl = $('#breathCount');
+    if (breath.timer) return;
+    if (phaseEl) phaseEl.textContent = '准备好了就点「开始呼吸」';
+    if (tipEl) tipEl.textContent = plan.desc || '';
+    if (countEl) countEl.textContent = '·';
+    var circle = $('#breathCircle');
+    if (circle) { circle.style.transform = 'scale(0.72)'; }
+  }
+
+  function breathStart() {
+    if (breath.timer) { breathStop(); return; }
+    var plan = breath.plan || E.breathPlan(breath.id);
+    if (!plan || !plan.phases.length) return;
+    breath.plan = plan;
+    breath.phase = 0;
+    breath.phaseLeft = plan.phases[0].sec;
+    breath.left = plan.totalSec;
+    breath.cycle = 0;
+    breath.done = 0;
+    breath.timer = setInterval(breathTick, 1000);
+    breathTick();
+  }
+
+  function breathPhaseScale(label) {
+    if (label === '吸气') return 1;
+    if (label === '呼气') return 0.72;
+    return 0.86;
+  }
+
+  function breathTick() {
+    var plan = breath.plan;
+    if (!plan) return;
+    var phase = plan.phases[breath.phase % plan.phases.length];
+    var phaseEl = $('#breathPhase');
+    var tipEl = $('#breathTip');
+    var countEl = $('#breathCount');
+    var circle = $('#breathCircle');
+    if (countEl) countEl.textContent = String(breath.phaseLeft);
+    if (phaseEl) phaseEl.textContent = phase.label + ' · ' + breath.phaseLeft + ' 秒';
+    if (tipEl) tipEl.textContent = phase.tip || '';
+    if (circle) {
+      circle.style.transitionDuration = (phase.sec || 1) + 's';
+      circle.style.transform = 'scale(' + breathPhaseScale(phase.label) + ')';
+    }
+    breath.left -= 1;
+    breath.phaseLeft -= 1;
+    if (breath.phaseLeft <= 0) {
+      breath.phase = (breath.phase + 1) % plan.phases.length;
+      breath.phaseLeft = plan.phases[breath.phase].sec;
+      breath.cycle += 1;
+      if (breath.cycle >= plan.cycleSec) { breathFinish(); return; }
+    }
+  }
+
+  function breathFinish() {
+    var plan = breath.plan;
+    breathStop(true);
+    var phaseEl = $('#breathPhase');
+    var tipEl = $('#breathTip');
+    var countEl = $('#breathCount');
+    var circle = $('#breathCircle');
+    if (phaseEl) phaseEl.textContent = '做完了 · 休息一下';
+    if (tipEl) tipEl.textContent = (plan && plan.finish) ? plan.finish : '';
+    if (countEl) countEl.textContent = '✓';
+    if (circle) { circle.style.transitionDuration = '1s'; circle.style.transform = 'scale(0.72)'; }
+    recordAction('b');
+    toast('呼吸做完啦，整个人松一点点 🌿');
+  }
+
+  function breathStop(silent) {
+    if (breath.timer) { clearInterval(breath.timer); breath.timer = null; }
+    if (silent) return;
+    var phaseEl = $('#breathPhase');
+    if (phaseEl) phaseEl.textContent = '停下了 · 随时可以再开始';
+    var tipEl = $('#breathTip');
+    if (tipEl && breath.plan) tipEl.textContent = breath.plan.desc || '';
+  }
+
+  /* ---------- 老板键伪装页（v1.8.0 新增） ---------- */
+  var bossState = { id: '' };
+
+  function renderBossPicker() {
+    var box = $('#bossPicker');
+    if (!box) return;
+    var list = E.bossPages();
+    if (!list.length) return;
+    if (!bossState.id) bossState.id = list[0].id;
+    box.innerHTML = '';
+    list.forEach(function (pg) {
+      var b = el('button', 'boss-chip');
+      b.type = 'button';
+      b.dataset.boss = pg.id;
+      b.appendChild(el('span', 'boss-chip-emoji', pg.emoji || '📄'));
+      b.appendChild(el('span', 'boss-chip-name', pg.name || ''));
+      b.addEventListener('click', function () {
+        bossState.id = pg.id;
+        syncBossPicker();
+        renderBossDoc();
+      });
+      box.appendChild(b);
+    });
+    syncBossPicker();
+    renderBossDoc();
+  }
+
+  function syncBossPicker() {
+    $$('.boss-chip').forEach(function (b) {
+      var on = b.dataset.boss === bossState.id;
+      b.classList.toggle('is-selected', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  function renderBossDoc() {
+    var pg = E.bossPage(bossState.id);
+    if (!pg) return;
+    var titleEl = $('#bossDocTitle');
+    var tagEl = $('#bossDocTag');
+    var headEl = $('#bossDocHead');
+    var bodyEl = $('#bossDocBody');
+    var listEl = $('#bossDocList');
+    if (titleEl) titleEl.textContent = pg.title || '';
+    if (tagEl) tagEl.textContent = pg.tag || '';
+    if (headEl) {
+      headEl.innerHTML = '';
+      (pg.table && pg.table.head ? pg.table.head : []).forEach(function (h) {
+        var th = document.createElement('th');
+        th.textContent = h;
+        headEl.appendChild(th);
+      });
+    }
+    if (bodyEl) {
+      bodyEl.innerHTML = '';
+      (pg.table && pg.table.rows ? pg.table.rows : []).forEach(function (row) {
+        var tr = document.createElement('tr');
+        row.forEach(function (cell) {
+          var td = document.createElement('td');
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        bodyEl.appendChild(tr);
+      });
+    }
+    if (listEl) {
+      listEl.innerHTML = '';
+      (pg.list || []).forEach(function (item) {
+        var li = document.createElement('li');
+        li.textContent = item;
+        listEl.appendChild(li);
+      });
+    }
+  }
+
   /* ---------- 番茄钟 ---------- */
   var pomo = { mode: 'focus', total: 25 * 60 * 1000, left: 25 * 60 * 1000, endAt: 0, timer: null };
+  var POMO_MODES = [
+    { key: 'focus', label: '专注中', minutes: 25, tip: '开始专注，25 分钟后再见 ⏳' },
+    { key: 'break', label: '休息一下', minutes: 5, tip: '休息 5 分钟，走一走 🌿' },
+    { key: 'long', label: '赶工中', minutes: 15, tip: '赶工 15 分钟，撑住 💪' }
+  ];
 
   function pomoLabel() {
-    return pomo.mode === 'focus' ? '专注中' : '休息一下';
+    for (var i = 0; i < POMO_MODES.length; i++) if (POMO_MODES[i].key === pomo.mode) return POMO_MODES[i].label;
+    return '专注中';
   }
 
   function pomoTotal() {
-    return pomo.mode === 'focus' ? 25 * 60 * 1000 : 5 * 60 * 1000;
+    for (var i = 0; i < POMO_MODES.length; i++) if (POMO_MODES[i].key === pomo.mode) return POMO_MODES[i].minutes * 60 * 1000;
+    return 25 * 60 * 1000;
+  }
+
+  function pomoTip() {
+    for (var i = 0; i < POMO_MODES.length; i++) if (POMO_MODES[i].key === pomo.mode) return POMO_MODES[i].tip;
+    return '';
   }
 
   function pomoRender() {
@@ -392,7 +607,13 @@
     pomo.endAt = Date.now() + pomo.left;
     pomo.timer = setInterval(pomoTick, 250);
     pomoRender();
-    toast(pomo.mode === 'focus' ? '开始专注，25 分钟后再见 ⏳' : '休息 5 分钟，走一走 🌿');
+    toast(pomoTip());
+  }
+
+  function pomoNextMode() {
+    var idx = 0, i;
+    for (i = 0; i < POMO_MODES.length; i++) if (POMO_MODES[i].key === pomo.mode) idx = i;
+    return POMO_MODES[(idx + 1) % POMO_MODES.length];
   }
 
   function pomoTick() {
@@ -402,11 +623,12 @@
       pomoStop();
       if (AUDIO) { try { AUDIO.chime(); } catch (e) { /* 忽略 */ } }
       recordAction('p');
-      pomo.mode = pomo.mode === 'focus' ? 'break' : 'focus';
+      var next = pomoNextMode();
+      pomo.mode = next.key;
       pomo.total = pomoTotal();
       pomo.left = pomo.total;
       pomoRender();
-      toast(pomo.mode === 'break' ? '叮！专注结束，去喝口水 ☕' : '叮！休息结束，回来继续 🌱');
+      toast('叮！' + next.label + '，换到 ' + next.minutes + ' 分钟 ⏱');
     }
   }
 
@@ -424,17 +646,19 @@
 
   function pomoToggleMode() {
     pomoStop();
-    pomo.mode = pomo.mode === 'focus' ? 'break' : 'focus';
+    var next = pomoNextMode();
+    pomo.mode = next.key;
     pomo.total = pomoTotal();
     pomo.left = pomo.total;
     pomoRender();
-    toast(pomo.mode === 'focus' ? '切回 25 分钟专注 ⏳' : '切到 5 分钟休息 🌿');
+    toast('切到 ' + next.minutes + ' 分钟 · ' + next.label + ' ⏱');
   }
 
   /* ---------- 老板键 ---------- */
   function bossShow(show) {
     var screen = $('#bossScreen');
     if (!screen) return;
+    if (show) renderBossDoc();
     screen.hidden = !show;
     document.body.classList.toggle('boss-mode', !!show);
     if (show && screen.focus) { try { screen.focus(); } catch (e) { /* 忽略 */ } }
@@ -540,7 +764,7 @@
       var data = loadStore();
       var days = data.days || {};
       var key = today();
-      var rec = days[key] || { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, moods: {}, ends: {} };
+      var rec = days[key] || { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, b: 0, moods: {}, ends: {} };
       rec[kind] = (rec[kind] || 0) + 1;
       if (extra && extra.mood) {
         rec.moods = rec.moods || {};
@@ -595,7 +819,8 @@
       { n: rep.totals.f, label: '摸鱼', emoji: '🐟' },
       { n: rep.totals.p, label: '专注', emoji: '⏳' },
       { n: rep.totals.s, label: '通关', emoji: '🎲' },
-      { n: rep.totals.g, label: '游戏', emoji: '🎮' }
+      { n: rep.totals.g, label: '游戏', emoji: '🎮' },
+      { n: rep.totals.b, label: '呼吸', emoji: '🫧' }
     ];
     cards.forEach(function (c) {
       var box = el('div', 'report-stat');
@@ -767,6 +992,15 @@
         if (e.key === 'Escape') bossToggle();
       });
     }
+    renderBossPicker();
+
+    // 呼吸急救
+    renderBreathPicker();
+    selectBreath(breath.id);
+    var bStart = $('#breathStart');
+    if (bStart) bStart.addEventListener('click', function () { breathStart(); });
+    var bStop = $('#breathStop');
+    if (bStop) bStop.addEventListener('click', function () { breathStop(); });
 
     // 番茄钟
     pomo.total = pomoTotal();
@@ -796,7 +1030,7 @@
           var data = loadStore();
           var days = data.days || {};
           var key = today();
-          var rec = days[key] || { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, moods: {}, ends: {} };
+          var rec = days[key] || { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, b: 0, moods: {}, ends: {} };
           rec.g = (rec.g || 0) + 1;
           rec.games = rec.games || {};
           rec.games[id] = (rec.games[id] || 0) + 1;

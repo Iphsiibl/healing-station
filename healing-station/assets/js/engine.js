@@ -383,7 +383,7 @@
     var base = new Date(String(todayStr || '') + 'T00:00:00');
     if (isNaN(base.getTime())) base = new Date();
 
-    var list = [], totals = { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0 }, moods = {}, ends = {}, max = 0;
+    var list = [], totals = { d: 0, r: 0, f: 0, p: 0, s: 0, g: 0, b: 0 }, moods = {}, ends = {}, max = 0;
     for (var i = span - 1; i >= 0; i--) {
       var dt = new Date(base.getTime() - i * 86400000);
       var key = dayKey(dt);
@@ -398,16 +398,17 @@
         p: rec ? (rec.p || 0) : 0,
         s: rec ? (rec.s || 0) : 0,
         g: rec ? (rec.g || 0) : 0,
+        b: rec ? (rec.b || 0) : 0,
         total: 0
       };
-      row.total = row.d + row.r + row.f + row.p + row.s + row.g;
+      row.total = row.d + row.r + row.f + row.p + row.s + row.g + row.b;
       if (rec && rec.moods) {
         for (var mk in rec.moods) if (Object.prototype.hasOwnProperty.call(rec.moods, mk)) moods[mk] = (moods[mk] || 0) + rec.moods[mk];
       }
       if (rec && rec.ends) {
         for (var ek in rec.ends) if (Object.prototype.hasOwnProperty.call(rec.ends, ek)) ends[ek] = (ends[ek] || 0) + rec.ends[ek];
       }
-      totals.d += row.d; totals.r += row.r; totals.f += row.f; totals.p += row.p; totals.s += row.s; totals.g += row.g;
+      totals.d += row.d; totals.r += row.r; totals.f += row.f; totals.p += row.p; totals.s += row.s; totals.g += row.g; totals.b += row.b;
       if (row.total > max) max = row.total;
       list.push(row);
     }
@@ -417,7 +418,7 @@
       max: max,
       moods: moods,
       ends: ends,
-      total: totals.d + totals.r + totals.f + totals.p + totals.s + totals.g,
+      total: totals.d + totals.r + totals.f + totals.p + totals.s + totals.g + totals.b,
       topMood: topKey(moods),
       topEnding: topKey(ends)
     };
@@ -435,6 +436,7 @@
     if (rep.totals.p) bits.push('专注 ' + rep.totals.p + ' 次');
     if (rep.totals.s) bits.push('通关 ' + rep.totals.s + ' 次');
     if (rep.totals.g) bits.push('游戏 ' + rep.totals.g + ' 局');
+    if (rep.totals.b) bits.push('呼吸 ' + rep.totals.b + ' 次');
 
     var text = '这周你在急救站被哄了 ' + rep.total + ' 次' + (bits.length ? '（' + bits.join('、') + '）' : '') + '。';
     if (rep.topMood && moodNames && moodNames[rep.topMood]) {
@@ -458,6 +460,52 @@
     return lines.join('\n');
   }
 
+  /* ---------- 模块三：呼吸引导与老板键伪装页（v1.8.0） ---------- */
+
+  var BREATH = root.HS_BREATH || (typeof require !== 'undefined' ? require('./data-breath.js') : {});
+  var BOSS = root.HS_BOSS || (typeof require !== 'undefined' ? require('./data-boss.js') : {});
+
+  function breathExercises() {
+    return (BREATH && BREATH.exercises) || [];
+  }
+
+  function findBreath(id) {
+    var list = breathExercises();
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return list[0] || null;
+  }
+
+  /* 把一套练习展开成阶段序列：[{label, sec, tip}]，并标注该阶段在整轮里的序号 */
+  function breathPlan(id) {
+    var ex = findBreath(id);
+    if (!ex) return null;
+    var phases = ex.phases || [];
+    var total = 0, i;
+    for (i = 0; i < phases.length; i++) total += Number(phases[i].sec) || 0;
+    return {
+      id: ex.id,
+      name: ex.name,
+      emoji: ex.emoji,
+      when: ex.when || '',
+      desc: ex.desc || '',
+      finish: ex.finish || '',
+      minutes: ex.minutes || Math.round(total / 60) || 1,
+      totalSec: total,
+      phases: phases,
+      cycleSec: total
+    };
+  }
+
+  function bossPages() {
+    return (BOSS && BOSS.pages) || [];
+  }
+
+  function bossPage(id) {
+    var list = bossPages();
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return list[0] || null;
+  }
+
   /* ---------- 导出 ---------- */
 
   var ENGINE = {
@@ -469,6 +517,11 @@
     replyCount: replyCount,
     findMood: findMood,
     findScene: findScene,
+    breathExercises: breathExercises,
+    findBreath: findBreath,
+    breathPlan: breathPlan,
+    bossPages: bossPages,
+    bossPage: bossPage,
     storyStart: storyStart,
     storyNode: storyNode,
     storyMove: storyMove,

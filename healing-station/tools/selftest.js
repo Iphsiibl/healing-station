@@ -326,6 +326,70 @@ ok(text.includes('【打工人急救站 · 本周疗愈周报】'), '可复制�
 ok(text.includes('不解决问题，只负责哄你开心'), '可复制周报落款正确');
 ok(text.split('\n').length >= 4, '可复制周报为多行文本', String(text.split('\n').length));
 
+/* ---------- 7. 摸鱼补给站：音色 / 呼吸 / 伪装页（v1.8.0 新增） ---------- */
+section('7. 摸鱼补给站内容（v1.8.0）');
+
+const audioSrc = fs.readFileSync(path.join(JS, 'audio.js'), 'utf8');
+const soundIds = [];
+const voiceRe = /\{\s*id:\s*'([a-z_]+)',\s*name:\s*'([^']+)',\s*emoji:\s*'([^']+)',\s*desc:\s*'([^']+)'\s*\}/g;
+let vm2;
+while ((vm2 = voiceRe.exec(audioSrc)) !== null) soundIds.push({ id: vm2[1], name: vm2[2], emoji: vm2[3], desc: vm2[4] });
+ok(soundIds.length >= 10, '环境音 >= 10 种', '实际 ' + soundIds.length);
+const soundIdsSet = new Set(soundIds.map(s => s.id));
+ok(soundIdsSet.size === soundIds.length, '环境音 id 不重复');
+['rain', 'cafe', 'subway', 'aircon', 'waves', 'pages', 'thunder', 'forest', 'train', 'typing'].forEach(id => {
+  ok(soundIdsSet.has(id), '存在环境音：' + id);
+});
+soundIds.forEach(s => {
+  ok(s.name.length >= 2 && s.desc.length >= 4, '环境音「' + s.id + '」名称与说明完整');
+  ok(audioSrc.indexOf(s.id + ': function') !== -1, '环境音「' + s.id + '」有合成实现');
+});
+
+const breathData = require(path.join(JS, 'data-breath.js'));
+const exercises = breathData.exercises || [];
+ok(exercises.length >= 3, '呼吸引导 >= 3 套', '实际 ' + exercises.length);
+exercises.forEach(ex => {
+  ok(!!ex.id && !!ex.name && !!ex.emoji && !!ex.when && !!ex.desc, '呼吸「' + ex.id + '」字段完整');
+  ok(Array.isArray(ex.phases) && ex.phases.length >= 2, '呼吸「' + ex.id + '」至少 2 个阶段');
+  ok(ex.finish && ex.finish.length >= 8, '呼吸「' + ex.id + '」有结束语');
+  ex.phases.forEach(p => ok(!!p.label && p.sec >= 1 && !!p.tip, '呼吸「' + ex.id + '」阶段「' + p.label + '」完整'));
+  const plan = engine.breathPlan(ex.id);
+  ok(!!plan && plan.totalSec > 0, 'breathPlan 可展开：' + ex.id);
+  ok(plan && plan.totalSec === ex.phases.reduce((a, p) => a + p.sec, 0), 'breathPlan 总秒数与数据一致：' + ex.id);
+});
+ok(engine.breathPlan('not-exist') !== null, '未知呼吸 id 回退到第一套');
+ok(engine.breathExercises().length === exercises.length, 'engine.breathExercises 可读取');
+
+const bossData = require(path.join(JS, 'data-boss.js'));
+const bossList = bossData.pages || [];
+ok(bossList.length >= 4, '老板键伪装页 >= 4 个', '实际 ' + bossList.length);
+const bossIds = new Set();
+bossList.forEach(pg => {
+  ok(!!pg.id && !!pg.name && !!pg.emoji && !!pg.title && !!pg.tag, '伪装页「' + pg.id + '」字段完整');
+  ok(!bossIds.has(pg.id), '伪装页 id 不重复：' + pg.id);
+  bossIds.add(pg.id);
+  const hasTable = pg.table && Array.isArray(pg.table.head) && pg.table.head.length >= 3 && Array.isArray(pg.table.rows) && pg.table.rows.length >= 3;
+  ok(hasTable || (Array.isArray(pg.list) && pg.list.length >= 2), '伪装页「' + pg.id + '」有表格或清单');
+  ok(engine.bossPage(pg.id) && engine.bossPage(pg.id).id === pg.id, 'bossPage 可按 id 取回：' + pg.id);
+});
+ok(engine.bossPage('not-exist') !== null, '未知伪装页 id 回退到第一页');
+ok(engine.bossPages().length === bossList.length, 'engine.bossPages 可读取');
+
+ok(html.indexOf('assets/js/data-breath.js') !== -1, '引入 data-breath.js');
+ok(html.indexOf('assets/js/data-boss.js') !== -1, '引入 data-boss.js');
+ok(html.indexOf('id="breathPicker"') !== -1 && html.indexOf('id="breathCircle"') !== -1, '页面存在呼吸引导区');
+ok(html.indexOf('id="bossPicker"') !== -1 && html.indexOf('id="bossDocTitle"') !== -1, '页面存在伪装页选择区');
+ok(html.indexOf('id="breathStart"') !== -1 && html.indexOf('id="breathStop"') !== -1, '页面存在呼吸开始/停止按钮');
+ok(appJs.indexOf('recordAction(\'b\')') !== -1, '呼吸完成后计入周报');
+
+// 周报分项新增呼吸次数
+const daysB = {};
+daysB['2026-11-15'] = { d: 1, r: 1, f: 1, p: 1, s: 1, g: 1, b: 2 };
+const repB = engine.weeklyReport(daysB, todayStr, 7);
+ok(repB.totals.b === 2, '周报统计呼吸次数', String(repB.totals.b));
+ok(repB.total === 8, '周报总量含呼吸次数', String(repB.total));
+ok(engine.reportSummary(repB, {}, {}).includes('呼吸 2 次'), '周报小结提到呼吸');
+
 /* ---------- 结果 ---------- */
 console.log('\n----------------------------------------');
 console.log('检查项：' + checks + '　失败：' + failures.length);
